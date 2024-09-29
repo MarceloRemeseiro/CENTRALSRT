@@ -2,11 +2,11 @@
 import axios from "axios";
 import https from "https";
 
-const RESTREAMER_API_URL = "https://lvp.streamingpro.es";
-const RESTREAMER__URL = "lvp.streamingpro.es";
-const port = "6001";
+const RESTREAMER_API_URL = "https://streamingpro.es";
+const RESTREAMER__URL = "streamingpro.es";
+const port = "6000";
 const RESTREAMER_USERNAME = "admin";
-const RESTREAMER_PASSWORD = "Fandroid2024";
+const RESTREAMER_PASSWORD = "Lumar1234";
 
 let accessToken = null;
 let refreshToken = null;
