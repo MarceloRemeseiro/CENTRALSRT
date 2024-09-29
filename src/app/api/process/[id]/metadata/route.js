@@ -37,7 +37,7 @@ export async function PUT(request) {
             "-dn", "-sn", 
             "-map", "0:0", "-codec:v", "copy",
             "-map", "0:1", "-codec:a", "copy", 
-            "-metadata", `title=https://lvp.streamingpro.es/${referenceId}/oembed.json`,
+            "-metadata", `title=https://streamingpro.es/${referenceId}/oembed.json`,
             "-metadata", "service_provider=datarhei-Restreamer", 
             "-f", "hls", 
             "-start_number", "0", 

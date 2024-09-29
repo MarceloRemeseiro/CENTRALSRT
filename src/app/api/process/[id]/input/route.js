@@ -26,10 +26,10 @@ export async function GET(request, { params }) {
       createdAt: inputData.created_at,
       createdAtFormatted: new Date(inputData.created_at * 1000).toLocaleString(),
       defaultOutputs: {
-        SRT: `srt://lvp.streamingpro.es:6001/?mode=caller&transtype=live&streamid=${inputData.reference},mode:request`,
-        RTMP: `rtmp://lvp.streamingpro.es/${inputData.reference}.stream`,
-        HLS: `https://lvp.streamingpro.es/memfs/${inputData.reference}.m3u8`,
-        HTML: `https://lvp.streamingpro.es/${inputData.reference}.html`,
+        SRT: `srt://streamingpro.es:6000/?mode=caller&transtype=live&streamid=${inputData.reference},mode:request`,
+        RTMP: `rtmp://streamingpro.es/${inputData.reference}.stream`,
+        HLS: `https://streamingpro.es/memfs/${inputData.reference}.m3u8`,
+        HTML: `https://streamingpro.es/${inputData.reference}.html`,
       },
       customOutputs: customOutputs.map(output => ({
         id: output.id,

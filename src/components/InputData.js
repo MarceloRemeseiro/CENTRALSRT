@@ -7,12 +7,12 @@ export default function InputData({ input }) {
         <div>
           <p className="text-gray-400 font-semibold">URL</p>
           <p className="text-sm text-gray-300 break-all">
-            srt://lvp.streamingpro.es
+            srt://streamingpro.es
           </p>
         </div>
         <div>
           <p className="text-gray-400 font-semibold">PORT</p>
-          <p className="text-sm text-gray-300">6001</p>
+          <p className="text-sm text-gray-300">6000</p>
         </div>
         <div>
           <p className="text-gray-400 font-semibold">LATENCY</p>
