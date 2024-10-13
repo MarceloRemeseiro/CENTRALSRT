@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPublicacion, toggleOutputState) => {
+export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPublicacion, toggleOutputState, editarPuntoPublicacion) => {
   const [localInput, setLocalInput] = useState(input);
   const [localOutputs, setLocalOutputs] = useState(input.customOutputs || []);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [videoRefreshTrigger, setVideoRefreshTrigger] = useState(0);
   const [newOutput, setNewOutput] = useState({ nombre: '', url: '', streamKey: '' });
+  const [editingOutput, setEditingOutput] = useState(null);
   const [confirmationModal, setConfirmationModal] = useState({ isOpen: false, message: '', onConfirm: null });
   const refreshTimeoutRef = useRef(null);
 
@@ -44,30 +46,51 @@ export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPubli
   }, [fetchInputStatus]);
 
   const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setNewOutput({ nombre: '', url: '', streamKey: '' });
+  };
+
+  const openEditModal = () => setIsEditModalOpen(true);
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingOutput(null);
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewOutput((prev) => ({ ...prev, [name]: value }));
+    if (editingOutput) {
+      setEditingOutput(prev => ({ ...prev, [name]: value }));
+    } else {
+      setNewOutput(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (newOutput.nombre && newOutput.url) {
       try {
+        console.log('Enviando datos para crear nuevo output:', newOutput);
         const createdOutput = await agregarPuntoPublicacion(input.id, newOutput);
-        if (createdOutput) {
-          setLocalOutputs(prevOutputs => [...prevOutputs, createdOutput]);
-          setLocalInput(prevInput => ({
-            ...prevInput,
-            customOutputs: [...(prevInput.customOutputs || []), createdOutput]
-          }));
-        }
-        setNewOutput({ nombre: '', url: '', streamKey: '' });
+        console.log('Respuesta del servidor al crear output:', createdOutput);
+
+        // Asegúrate de que el ID del nuevo output es correcto
+        const newOutputId = createdOutput.id.replace(/^restreamer-ui:egress:rtmp:restreamer-ui:egress:rtmp:/, 'restreamer-ui:egress:rtmp:');
+
+        // Actualizar los datos locales con la información correcta del servidor
+        setLocalOutputs(prevOutputs => [...prevOutputs, {
+          id: newOutputId,
+          name: createdOutput.name,
+          address: createdOutput.address,
+          key: createdOutput.key,
+          state: createdOutput.state
+        }]);
+        
         closeModal();
+        setNewOutput({ nombre: '', url: '', streamKey: '' });
       } catch (error) {
-        console.error('Error al agregar el punto de publicación:', error);
-        alert('Error al agregar el punto de publicación. Por favor, inténtelo de nuevo.');
+        console.error('Error al crear el punto de publicación:', error);
+        alert('Error al crear el punto de publicación. Por favor, inténtelo de nuevo.');
       }
     } else {
       alert('Por favor, complete al menos el nombre y la URL.');
@@ -166,21 +189,100 @@ export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPubli
     }
   };
 
+  const handleEditarPunto = (outputId) => {
+    console.log("Editando output con ID:", outputId);
+    // Corregir el ID si es necesario
+    const correctedOutputId = outputId.replace(/^restreamer-ui:egress:rtmp:restreamer-ui:egress:rtmp:/, 'restreamer-ui:egress:rtmp:');
+    const output = localOutputs.find(o => o.id === correctedOutputId);
+    console.log("Output encontrado para editar:", output);
+    
+    if (output) {
+      const editingOutputData = {
+        id: correctedOutputId,
+        nombre: output.name,
+        url: output.address,
+        streamKey: output.key
+      };
+      console.log("Datos de edición preparados:", editingOutputData);
+      setEditingOutput(editingOutputData);
+      openEditModal();
+    } else {
+      console.error("No se encontró el output con id:", correctedOutputId);
+    }
+  };
+
+  const handleUpdateOutput = async (e) => {
+    e.preventDefault();
+    if (editingOutput && editingOutput.nombre && editingOutput.url) {
+      try {
+        console.log('Enviando actualización para:', editingOutput);
+        
+        // El ID ya debería estar corregido, pero por si acaso:
+        const correctOutputId = editingOutput.id.replace(/^restreamer-ui:egress:rtmp:restreamer-ui:egress:rtmp:/, 'restreamer-ui:egress:rtmp:');
+        
+        const response = await fetch(`/api/process/${input.id}/outputs/${correctOutputId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            nombre: editingOutput.nombre,
+            url: editingOutput.url,
+            streamKey: editingOutput.streamKey,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const responseText = await response.text();
+        console.log('Respuesta del servidor (texto):', responseText);
+
+        let updatedOutput;
+        try {
+          updatedOutput = JSON.parse(responseText);
+        } catch (error) {
+          console.error('Error al parsear la respuesta JSON:', error);
+          throw new Error('La respuesta del servidor no es JSON válido');
+        }
+
+        console.log('Respuesta del servidor (JSON):', updatedOutput);
+
+        setLocalOutputs(prevOutputs => prevOutputs.map(output => 
+          output.id === updatedOutput.updatedOutput.id ? updatedOutput.updatedOutput : output
+        ));
+        closeEditModal();
+      } catch (error) {
+        console.error('Error detallado al editar el punto de publicación:', error);
+        alert(`Error al editar el punto de publicación: ${error.message}`);
+      }
+    } else {
+      alert('Por favor, complete al menos el nombre y la URL.');
+    }
+  };
+
   return {
     localInput,
-    setLocalInput, 
+    setLocalInput,
     localOutputs,
-    setLocalOutputs, 
     isModalOpen,
+    isEditModalOpen,
     videoRefreshTrigger,
     newOutput,
+    editingOutput,
     confirmationModal,
     openModal,
     closeModal,
+    openEditModal,
+    closeEditModal,
     handleInputChange,
     handleSubmit,
     handleEliminarPunto,
     handleToggle,
+    handleEditarPunto,
+    handleUpdateOutput,
     setConfirmationModal,
+    setEditingOutput,
   };
 };

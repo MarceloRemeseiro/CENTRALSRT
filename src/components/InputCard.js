@@ -15,23 +15,38 @@ const InputCard = ({
   agregarPuntoPublicacion,
   eliminarPuntoPublicacion,
   toggleOutputState,
+  editarPuntoPublicacion,
 }) => {
   const {
     localInput,
     setLocalInput,
     localOutputs,
     isModalOpen,
+    isEditModalOpen,
     videoRefreshTrigger,
     newOutput,
+    editingOutput,
     confirmationModal,
     openModal,
     closeModal,
+    openEditModal,
+    closeEditModal,
     handleInputChange,
     handleSubmit,
     handleEliminarPunto,
     handleToggle,
+    handleEditarPunto,
+    handleUpdateOutput,
     setConfirmationModal,
-  } = useInputLogic(input, agregarPuntoPublicacion, eliminarPuntoPublicacion, toggleOutputState);
+    setEditingOutput,
+  } = useInputLogic(
+    input,
+    agregarPuntoPublicacion,
+    eliminarPuntoPublicacion,
+    toggleOutputState,
+    editarPuntoPublicacion
+  );
+  console.log(editingOutput);
 
   const getStatusIcon = (state) => {
     return state === "running" ? "🟢" : "🔴";
@@ -50,7 +65,7 @@ const InputCard = ({
       <InputData input={input} />
       <div className="mb-4">
         <h3 className="text-lg font-semibold mb-2">Video Preview</h3>
-        <div className="video-wrapper" style={{ aspectRatio: '16 / 9' }}>
+        <div className="video-wrapper" style={{ aspectRatio: "16 / 9" }}>
           <VideoPlayer
             url={localInput.defaultOutputs.HLS}
             isRunning={localInput.state === "running"}
@@ -64,6 +79,7 @@ const InputCard = ({
         localOutputs={localOutputs}
         handleEliminarPunto={handleEliminarPunto}
         handleToggle={handleToggle}
+        handleEditarPunto={handleEditarPunto}
       />
       <div className="flex justify-center mt-4">
         <button
@@ -76,7 +92,7 @@ const InputCard = ({
 
       {isModalOpen && (
         <Modal onClose={closeModal}>
-          <h2 className="text-xl font-bold mb-4">RTMP</h2>
+          <h2 className="text-xl font-bold mb-4">Agregar RTMP</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="text-gray-400">Nombre</label>
@@ -120,6 +136,54 @@ const InputCard = ({
           </form>
         </Modal>
       )}
+
+      {isEditModalOpen && editingOutput && (
+        <Modal onClose={closeEditModal}>
+          <h2 className="text-xl font-bold mb-4">Editar RTMP</h2>
+          <form onSubmit={handleUpdateOutput} className="space-y-4">
+            <div>
+              <label className="text-gray-400">Nombre</label>
+              <input
+                type="text"
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                placeholder="Ingresa un nombre"
+                name="nombre"
+                value={editingOutput.nombre || ''}
+                onChange={(e) => setEditingOutput({...editingOutput, nombre: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-gray-400">URL</label>
+              <input
+                type="text"
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                placeholder="Ingresa la URL"
+                name="url"
+                value={editingOutput.url || ''}
+                onChange={(e) => setEditingOutput({...editingOutput, url: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-gray-400">Key</label>
+              <input
+                type="text"
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                placeholder="Ingresa la Key"
+                name="streamKey"
+                value={editingOutput.streamKey || ''}
+                onChange={(e) => setEditingOutput({...editingOutput, streamKey: e.target.value})}
+              />
+            </div>
+            <button
+              type="submit"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+            >
+              Actualizar
+            </button>
+          </form>
+        </Modal>
+      )}
+
       <ConfirmationModal
         isOpen={confirmationModal.isOpen}
         onClose={() =>
