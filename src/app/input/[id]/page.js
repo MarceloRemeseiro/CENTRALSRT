@@ -9,7 +9,8 @@ export default function InputPage({ params }) {
   const { 
     agregarPuntoPublicacion, 
     eliminarPuntoPublicacion, 
-    toggleOutputState 
+    toggleOutputState,
+    editarPuntoPublicacion
   } = useInputs();
 
   const [input, setInput] = useState(null);
@@ -72,6 +73,19 @@ export default function InputPage({ params }) {
     return updatedOutput;
   };
 
+  const handleEditarPuntoPublicacion = async (inputId, outputId, data) => {
+    const updatedOutput = await editarPuntoPublicacion(inputId, outputId, data);
+    if (updatedOutput) {
+      setInput((prevInput) => ({
+        ...prevInput,
+        customOutputs: prevInput.customOutputs.map((output) =>
+          output.id === outputId ? { ...output, ...updatedOutput } : output
+        ),
+      }));
+    }
+    return updatedOutput;
+  };
+
   if (loading)
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-gray-900 z-50">
@@ -89,6 +103,7 @@ export default function InputPage({ params }) {
         agregarPuntoPublicacion={handleAgregarPuntoPublicacion}
         eliminarPuntoPublicacion={handleEliminarPuntoPublicacion}
         toggleOutputState={handleToggleOutputState}
+        editarPuntoPublicacion={handleEditarPuntoPublicacion}
       />
     </div>
   );
