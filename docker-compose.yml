@@ -6,7 +6,21 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: centralsrt
-    command: sh -c "while ! nc -z db 3306; do echo 'Waiting for MySQL to be ready...';sleep 1;done;echo 'MySQL is ready!';npx prisma generate && npx prisma migrate deploy && if [ "$NODE_ENV" = "production" ]; then npm run build && npm run start; else npm run dev; fi "
+    command: >
+      sh -c "
+        echo 'Waiting for MySQL to be ready...' &&
+        while ! nc -z db 3306; do
+          sleep 1
+        done &&
+        echo 'MySQL is ready!' &&
+        npx prisma generate &&
+        npx prisma db push --accept-data-loss &&
+        if [ "$NODE_ENV" = "production" ]; then
+          npm run build && npm run start
+        else
+          npm run dev
+        fi
+      "
     ports:
       - '3001:3000'
     volumes:
@@ -22,21 +36,19 @@ services:
 
   db:
     image: mysql:8.0
-    container_name: mysql-central
-    restart: always
+    container_name: mysql
     environment:
-      MYSQL_ROOT_PASSWORD: 1122
-      MYSQL_DATABASE: dbcentral
+      - MYSQL_ROOT_PASSWORD=1122
+      - MYSQL_DATABASE=dbcentral
     ports:
       - '3307:3306'
     volumes:
-      - db_data:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
     networks:
       - app-network
 
 volumes:
-  db_data:
-
+  mysql_data:
 
 networks:
   app-network:
