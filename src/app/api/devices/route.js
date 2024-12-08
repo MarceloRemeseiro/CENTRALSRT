@@ -5,7 +5,7 @@ import prisma from '@/prisma';
 export async function GET() {
   try {
     // Primero actualizamos el estado de los dispositivos inactivos
-    const thirtySecondsAgo = new Date(Date.now() - 30000); // 30 segundos
+    const thirtySecondsAgo = new Date(Date.now() - 10000); // 10 segundos
     
     await prisma.device.updateMany({
       where: {

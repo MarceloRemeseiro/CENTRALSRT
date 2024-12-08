@@ -40,7 +40,7 @@ export default function DevicesPage() {
     fetchDevices();
     fetchSrtInputs();
     
-    const pollInterval = setInterval(fetchDevices, 5000);
+    const pollInterval = setInterval(fetchDevices, 10000); // 10 segundos
 
     return () => clearInterval(pollInterval);
   }, []);
@@ -103,6 +103,27 @@ export default function DevicesPage() {
       }
     } catch (error) {
       console.error('Error al actualizar nombre:', error);
+    }
+  };
+
+  const handleDeleteDevice = async (deviceId) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este dispositivo?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/devices/${deviceId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        // Actualizar la lista de dispositivos
+        setDevices(devices.filter(device => device.device_id !== deviceId));
+      } else {
+        console.error('Error al eliminar dispositivo');
+      }
+    } catch (error) {
+      console.error('Error al eliminar dispositivo:', error);
     }
   };
 
@@ -175,13 +196,21 @@ export default function DevicesPage() {
                   <StatusIndicator status={device.status} />
                 </td>
                 <td className="border border-gray-400 px-4 py-2">
-                  <button
-                    onClick={() => handleSendSrtConfig(device.device_id)}
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                    disabled={!device.assigned_srt}
-                  >
-                    Enviar Config
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleSendSrtConfig(device.device_id)}
+                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                      disabled={!device.assigned_srt}
+                    >
+                      Enviar Config
+                    </button>
+                    <button
+                      onClick={() => handleDeleteDevice(device.device_id)}
+                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
