@@ -1,6 +1,9 @@
 # Dockerfile
 FROM node:18-alpine
 
+# Instalar OpenSSL y otras dependencias necesarias
+RUN apk add --no-cache openssl openssl-dev
+
 # Establecer el directorio de trabajo
 WORKDIR /app
 
