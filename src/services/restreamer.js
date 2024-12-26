@@ -112,8 +112,8 @@ async function authenticatedRequest(method, url, data = null) {
 export async function restreamerAPIConnection() {
   try {
     const data = await authenticatedRequest("GET", "/api/v3/process");
-
-    // Primera pasada: procesamos los inputs de tipo 'ingest'
+    
+    // Primera pasada: procesamos los inputs
     const inputs = data.reduce((acc, process) => {
       if (
         process.type === "ffmpeg" &&
@@ -121,27 +121,26 @@ export async function restreamerAPIConnection() {
         !process.id.includes("_snapshot")
       ) {
         const streamId = process.reference;
+        const inputAddress = process.config.input[0].address;
+        const isRTMP = inputAddress.startsWith('{rtmp');
 
         const inputInfo = {
           id: process.id,
           name: process.metadata?.["restreamer-ui"]?.meta?.name || "Sin nombre",
-          description:
-            process.metadata?.["restreamer-ui"]?.meta?.description ||
-            "Sin descripción",
+          description: process.metadata?.["restreamer-ui"]?.meta?.description || "Sin descripción",
           createdAt: process.created_at,
-          createdAtFormatted: new Date(
-            process.created_at * 1000
-          ).toLocaleString(),
+          createdAtFormatted: new Date(process.created_at * 1000).toLocaleString(),
           streamId: streamId,
           state: process.state?.exec || "Desconocido",
+          type: isRTMP ? 'rtmp' : 'srt',  // Añadimos el tipo
+          inputAddress: inputAddress,      // Añadimos la dirección original
           defaultOutputs: {
-            SRT: `srt://${RESTREAMER__URL}:${port}/?mode=caller&transtype=live&streamid=${streamId},mode:request`,
+            SRT: `srt://${RESTREAMER__URL}:${port}/?mode=caller&transtype=live&streamid=${streamId}.mode:request`,
             RTMP: `rtmp://${RESTREAMER__URL}/${streamId}.stream`,
             HLS: `https://${RESTREAMER__URL}/memfs/${streamId}.m3u8`,
             HTML: `https://${RESTREAMER__URL}/${streamId}.html`,
           },
-
-          customOutputs: [], // Inicializamos vacío para luego añadir los outputs
+          customOutputs: [],
         };
         acc.push(inputInfo);
       }
@@ -179,10 +178,7 @@ export async function restreamerAPIConnection() {
 
     return inputs;
   } catch (error) {
-    console.error(
-      "Error al conectarse con la API de Restreamer:",
-      error.message
-    );
+    console.error("Error al conectarse con la API de Restreamer:", error.message);
     throw error;
   }
 }

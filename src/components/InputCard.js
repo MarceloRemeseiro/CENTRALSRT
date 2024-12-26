@@ -46,23 +46,55 @@ const InputCard = ({
     toggleOutputState,
     editarPuntoPublicacion
   );
-  console.log(editingOutput);
 
   const getStatusIcon = (state) => {
     return state === "running" ? "🟢" : "🔴";
   };
 
+  // Determinar el tipo de input y su color de fondo
+  
+  const isRTMP = input.type === 'rtmp';
+  const cardBackground = isRTMP ? 'bg-blue-900' : 'bg-blue-950';
+console.log(input);
+
+  // Función para separar la URL RTMP y la streamkey
+  const getRTMPDetails = (rtmpUrl) => {
+    if (!rtmpUrl) return { baseUrl: '', streamKey: '' };
+    
+    // Encontrar la última ocurrencia de '/'
+    const lastSlashIndex = rtmpUrl.lastIndexOf('/');
+    if (lastSlashIndex === -1) return { baseUrl: rtmpUrl, streamKey: '' };
+
+    const baseUrl = rtmpUrl.substring(0, lastSlashIndex + 1); // Incluimos el '/'
+    const streamKey = rtmpUrl.substring(lastSlashIndex + 1).replace('.stream', '');
+
+    return { baseUrl, streamKey };
+  };
+
+  // Obtener URL base y streamkey
+  const { baseUrl, streamKey } = getRTMPDetails(input.defaultOutputs.RTMP);
+
   return (
-    <div className="bg-gray-800 text-gray-200 shadow-lg rounded-lg p-6">
-      <div className="flex justify-between items-center">
+    <div className={`${cardBackground} text-gray-200 shadow-lg rounded-lg p-6`}>
+      <div className="flex justify-between items-start">
         <Link href={`input/${input.id}`}>
           <h2 className="text-xl font-bold mb-2 text-white">
-            SRT INPUT # {index + 1}
+            {input.name}
+            <span className="ml-2 text-sm font-normal text-gray-400">
+              {isRTMP ? 'RTMP' : 'SRT'}
+            </span>
           </h2>
+          <h3 className="text-base font-normal text-gray-400 h-16">
+            {input.description}
+          </h3>
         </Link>
-        <span className="text-2xl mb-2">{getStatusIcon(localInput.state)}</span>
+        <div className="text-2xl">
+          {getStatusIcon(localInput.state)}
+        </div>
       </div>
-      <InputData input={input} />
+
+   
+
       <div className="mb-4">
         <h3 className="text-lg font-semibold mb-2">Video Preview</h3>
         <div className="video-wrapper" style={{ aspectRatio: "16 / 9" }}>
@@ -73,7 +105,11 @@ const InputCard = ({
           />
         </div>
       </div>
-      <InputInfo name={input.name} streamId={input.streamId} />
+
+      <InputInfo 
+        data={input}
+        
+      />
       <OutputDefault defaultOutputs={input.defaultOutputs} />
       <CustomOutputs
         localOutputs={localOutputs}
@@ -106,7 +142,7 @@ const InputCard = ({
               />
             </div>
             <div>
-              <label className="text-gray-400">URL</label>
+              <label className="text-gray-800">URL</label>
               <input
                 type="text"
                 className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"

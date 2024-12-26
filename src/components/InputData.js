@@ -1,7 +1,6 @@
 import CopyButton from "./CopyButton";
 
 export default function InputData({ input }) {
-  console.log(input);
   return (
     <div className="bg-gray-700 p-4 rounded-lg mb-4">
       <div className="grid grid-cols-2 gap-4">

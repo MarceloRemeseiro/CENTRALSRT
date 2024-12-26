@@ -36,7 +36,7 @@ const CustomOutputs = ({
       </h3>
       <div className="space-y-2">
         {localOutputs.map((output, index) => (
-          <div key={output.id} className="bg-gray-700 p-3 rounded">
+          <div key={output.id} className="bg-slate-800 p-3 rounded">
             <div className="flex justify-between items-center">
               <p>
                 <strong className="text-gray-300">Nombre:</strong> {output.name}
