@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import EditNameModal from '@/components/EditNameModal';
 
 export default function DevicesPage() {
@@ -8,22 +8,25 @@ export default function DevicesPage() {
   const [loading, setLoading] = useState(true);
   const [editingDevice, setEditingDevice] = useState(null);
 
-  useEffect(() => {
-    // Obtener la lista de dispositivos
-    const fetchDevices = async () => {
-      try {
-        const response = await fetch('/api/devices');
-        if (response.ok) {
-          const data = await response.json();
-          setDevices(data);
-        }
-      } catch (error) {
-        console.error('Error al obtener dispositivos:', error);
-      } finally {
-        setLoading(false);
+  const fetchDevices = useCallback(async () => {
+    try {
+      const response = await fetch('/api/devices');
+      if (response.ok) {
+        const data = await response.json();
+        setDevices(prevDevices => data.map(newDevice => ({
+          ...newDevice,
+          // Mantener el selected_srt del estado anterior o usar assigned_srt
+          selected_srt: (prevDevices.find(d => d.device_id === newDevice.device_id)?.selected_srt) || newDevice.assigned_srt || ''
+        })));
       }
-    };
+    } catch (error) {
+      console.error('Error al obtener dispositivos:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
+  useEffect(() => {
     // Obtener la lista de SRTs disponibles
     const fetchSrtInputs = async () => {
       try {
@@ -43,38 +46,41 @@ export default function DevicesPage() {
     const pollInterval = setInterval(fetchDevices, 10000); // 10 segundos
 
     return () => clearInterval(pollInterval);
-  }, []);
+  }, [fetchDevices]);
 
   const handleSrtSelection = async (deviceId, srtId) => {
     try {
-      const response = await fetch(`/api/devices/${deviceId}/srt`, {
+      // Actualizar estado local inmediatamente
+      setDevices(prevDevices => prevDevices.map(device => {
+        if (device.device_id === deviceId) {
+          return { ...device, selected_srt: srtId, assigned_srt: srtId };
+        }
+        return device;
+      }));
+
+      // Construir URL SRT limpia
+      let srtUrl = null;
+      if (srtId) {
+        const selectedSrt = srtInputs.find(srt => srt.id === srtId);
+        if (selectedSrt) {
+          const streamId = selectedSrt.streamId
+            .replace('restreamer-ui:ingest:', '')
+            .replace('?mode=request', '');
+            
+          srtUrl = `srt://streamingpro.es:6000/?mode=caller&transtype=live&streamid=${streamId}`;
+        }
+      }
+
+      // Actualizar en el servidor
+      await fetch(`/api/devices/${deviceId}/srt`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ srtId }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ srtId: srtId || null })
       });
 
-      if (response.ok) {
-        // Actualizar la lista de dispositivos
-        const updatedDevices = devices.map(device => 
-          device.device_id === deviceId 
-            ? { ...device, assigned_srt: srtId }
-            : device
-        );
-        setDevices(updatedDevices);
-      }
     } catch (error) {
-      console.error('Error al asignar SRT:', error);
-    }
-  };
-
-  const handleSendSrtConfig = (deviceId) => {
-    const selectedSrt = srtInputs.find(srt => srt.id === devices.find(device => device.device_id === deviceId).assigned_srt);
-    if (selectedSrt) {
-      const srtUrl = `srt://streamingpro.es:6000/?mode=caller&transtype=live&streamid=${selectedSrt.streamId}`;
-      console.log('URL SRT para el dispositivo:', deviceId);
-      console.log(srtUrl);
+      console.error('Error:', error);
+      fetchDevices();
     }
   };
 
@@ -156,7 +162,8 @@ export default function DevicesPage() {
           <thead>
             <tr className="bg-gray-200 text-black">
               <th className="border border-gray-400 px-4 py-2">Device ID</th>
-              <th className="border border-gray-400 px-4 py-2">IP Address</th>
+              <th className="border border-gray-400 px-4 py-2">IP Local</th>
+              <th className="border border-gray-400 px-4 py-2">IP Pública</th>
               <th className="border border-gray-400 px-4 py-2">SRT Asignado</th>
               <th className="border border-gray-400 px-4 py-2">Estado</th>
               <th className="border border-gray-400 px-4 py-2">Acciones</th>
@@ -164,7 +171,7 @@ export default function DevicesPage() {
           </thead>
           <tbody>
             {devices.map((device) => (
-              <tr key={device.id}>
+              <tr key={device.device_id}>
                 <td className="border border-gray-400 px-4 py-2">
                   <div className="flex items-center gap-2">
                     <span>{device.display_name || device.device_id}</span>
@@ -177,14 +184,15 @@ export default function DevicesPage() {
                   </div>
                   <span className="text-xs text-gray-500">{device.device_id}</span>
                 </td>
-                <td className="border border-gray-400 px-4 py-2">{device.ip_address}</td>
+                <td className="border border-gray-400 px-4 py-2">{device.local_ip}</td>
+                <td className="border border-gray-400 px-4 py-2">{device.public_ip}</td>
                 <td className="border border-gray-400 px-4 py-2">
                   <select
                     className="w-full bg-gray-800 text-white rounded p-2"
-                    value={device.assigned_srt || ''}
+                    value={device.selected_srt || ''}
                     onChange={(e) => handleSrtSelection(device.device_id, e.target.value)}
                   >
-                    <option value="">Seleccionar SRT</option>
+                    <option value="">NINGUNO</option>
                     {srtInputs.map((srt) => (
                       <option key={srt.id} value={srt.id}>
                         {srt.name}
@@ -196,21 +204,12 @@ export default function DevicesPage() {
                   <StatusIndicator status={device.status} />
                 </td>
                 <td className="border border-gray-400 px-4 py-2">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleSendSrtConfig(device.device_id)}
-                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                      disabled={!device.assigned_srt}
-                    >
-                      Enviar Config
-                    </button>
-                    <button
-                      onClick={() => handleDeleteDevice(device.device_id)}
-                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => handleDeleteDevice(device.device_id)}
+                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                  >
+                    Eliminar
+                  </button>
                 </td>
               </tr>
             ))}

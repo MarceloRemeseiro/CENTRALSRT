@@ -11,9 +11,10 @@ model Device {
   id           Int      @id @default(autoincrement())
   device_id    String   @unique
   display_name String?
-  ip_address   String
-  assigned_srt String?
+  local_ip     String?
+  public_ip    String?
   status       String   @default("OFFLINE")
-  created_at   DateTime @default(now())
+  assigned_srt String?
   last_ping    DateTime @default(now())
+  created_at   DateTime @default(now())
 }

@@ -15,10 +15,7 @@ export async function PUT(request, { params }) {
 
     return NextResponse.json(device);
   } catch (error) {
-    console.error("Error al actualizar SRT:", error);
-    return NextResponse.json(
-      { message: "Error al actualizar SRT" },
-      { status: 500 }
-    );
+    console.error("Error:", error);
+    return NextResponse.json({ message: "Error al actualizar SRT" }, { status: 500 });
   }
 } 
