@@ -4,6 +4,7 @@ import InputCard from "../components/InputCard";
 import Login from "../components/Login";
 import useAuth from "../hooks/useAuth";
 import useInputs from "../hooks/useInputs";
+import Link from 'next/link';
 
 function Home() {
   const { user, loading: authLoading, handleLogin, handleLogout } = useAuth();
@@ -14,11 +15,13 @@ function Home() {
     fetchInputs, 
     agregarPuntoPublicacion, 
     eliminarPuntoPublicacion, 
-    toggleOutputState 
+    toggleOutputState,
+    updateInputMetadata 
   } = useInputs();
 
   const [isClient, setIsClient] = useState(false);
-
+  console.log(inputs);
+  
   useEffect(() => {
     setIsClient(true);
     if (user) {
@@ -55,29 +58,40 @@ function Home() {
   }
 
   return (
-    <main className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">StreamingPro Inputs</h1>
-        <button 
-          onClick={handleLogout}
-          className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Cerrar sesión
-        </button>
+    <div className="min-h-screen bg-gray-900">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-white">Inputs</h1>
+          <div className="flex items-center gap-4">
+            <Link 
+              href="/devices" 
+              className="text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              Ver dispositivos
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="text-red-400 hover:text-red-300 transition-colors"
+            >
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {inputs.map((input, index) => (
+            <InputCard
+              key={input.id}
+              input={input}
+              index={index}
+              agregarPuntoPublicacion={agregarPuntoPublicacion}
+              eliminarPuntoPublicacion={eliminarPuntoPublicacion}
+              toggleOutputState={toggleOutputState}
+              updateInputMetadata={updateInputMetadata}
+            />
+          ))}
+        </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {inputs.map((input, index) => (
-          <InputCard
-            key={input.id}
-            input={input}
-            index={index}
-            agregarPuntoPublicacion={agregarPuntoPublicacion}
-            eliminarPuntoPublicacion={eliminarPuntoPublicacion}
-            toggleOutputState={toggleOutputState}
-          />
-        ))}
-      </div>
-    </main>
+    </div>
   );
 }
 

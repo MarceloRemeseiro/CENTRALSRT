@@ -25,6 +25,8 @@ export async function GET(request, { params }) {
       state: inputData.state?.exec || 'Desconocido',
       createdAt: inputData.created_at,
       createdAtFormatted: new Date(inputData.created_at * 1000).toLocaleString(),
+      type: inputData.config?.input?.[0]?.address?.startsWith('{rtmp') ? 'rtmp' : 'srt',
+      inputAddress: inputData.config?.input?.[0]?.address,
       defaultOutputs: {
         SRT: `srt://streamingpro.es:6000/?mode=caller&transtype=live&streamid=${inputData.reference},mode:request`,
         RTMP: `rtmp://streamingpro.es/${inputData.reference}.stream`,

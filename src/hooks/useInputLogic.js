@@ -15,28 +15,36 @@ export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPubli
     try {
       const response = await fetch(`/api/process/${input.id}/state`);
       const data = await response.json();
-      setLocalInput((prevInput) => {
-        if (prevInput.state !== data.state) {
-          if (data.state === 'running') {
-            if (refreshTimeoutRef.current) {
-              clearTimeout(refreshTimeoutRef.current);
-            }
-            refreshTimeoutRef.current = setTimeout(() => {
-              setVideoRefreshTrigger(prev => prev + 1);
-            }, 3000);
+      
+      const newState = data.state;
+      
+      if (localInput.state !== newState) {
+        setLocalInput(prevInput => ({
+          ...input, // Usar el input original para mantener toda la información
+          ...prevInput, // Mantener cualquier actualización local
+          state: newState,
+          progress: data.progress
+        }));
+        
+        if (newState === 'running') {
+          if (refreshTimeoutRef.current) {
+            clearTimeout(refreshTimeoutRef.current);
           }
-          return { ...prevInput, ...data };
+          refreshTimeoutRef.current = setTimeout(() => {
+            setVideoRefreshTrigger(prev => prev + 1);
+          }, 3000);
         }
-        return prevInput;
-      });
+      }
     } catch (error) {
       console.error('Error fetching input status:', error);
     }
-  }, [input.id]);
+  }, [input, localInput]);
 
   useEffect(() => {
-    fetchInputStatus();
+
+    fetchInputStatus(); // Primera llamada inmediata
     const intervalId = setInterval(fetchInputStatus, 5000);
+    
     return () => {
       clearInterval(intervalId);
       if (refreshTimeoutRef.current) {
@@ -44,6 +52,17 @@ export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPubli
       }
     };
   }, [fetchInputStatus]);
+
+  // Efecto para sincronizar cuando cambia el input
+  useEffect(() => {
+  
+    setLocalInput(input);
+  }, [input]);
+
+  useEffect(() => {
+    if (videoRefreshTrigger > 0) {
+    }
+  }, [videoRefreshTrigger]);
 
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => {
@@ -70,9 +89,7 @@ export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPubli
     e.preventDefault();
     if (newOutput.nombre && newOutput.url) {
       try {
-        console.log('Enviando datos para crear nuevo output:', newOutput);
         const createdOutput = await agregarPuntoPublicacion(input.id, newOutput);
-        console.log('Respuesta del servidor al crear output:', createdOutput);
 
         // Asegúrate de que el ID del nuevo output es correcto
         const newOutputId = createdOutput.id.replace(/^restreamer-ui:egress:rtmp:restreamer-ui:egress:rtmp:/, 'restreamer-ui:egress:rtmp:');
@@ -107,7 +124,6 @@ export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPubli
 
   const performEliminarPunto = async (outputId) => {
     const correctedOutputId = outputId.replace(/^(restreamer-ui:egress:rtmp:)(?:restreamer-ui:egress:rtmp:)?/, '$1');
-    console.log('ID corregido para eliminar:', correctedOutputId);
 
     try {
       await eliminarPuntoPublicacion(input.id, correctedOutputId);
@@ -143,11 +159,9 @@ export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPubli
       );
 
       const correctedOutputId = outputId.replace(/^(restreamer-ui:egress:rtmp:)(?:restreamer-ui:egress:rtmp:)?/, '$1');
-      console.log('ID corregido:', correctedOutputId);
 
       const updatedOutput = await toggleOutputState(correctedOutputId, newState);
 
-      console.log('Estado actualizado recibido:', updatedOutput.state);
 
       setLocalOutputs((prevOutputs) =>
         prevOutputs.map((output, i) =>
@@ -190,11 +204,9 @@ export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPubli
   };
 
   const handleEditarPunto = (outputId) => {
-    console.log("Editando output con ID:", outputId);
     // Corregir el ID si es necesario
     const correctedOutputId = outputId.replace(/^restreamer-ui:egress:rtmp:restreamer-ui:egress:rtmp:/, 'restreamer-ui:egress:rtmp:');
     const output = localOutputs.find(o => o.id === correctedOutputId);
-    console.log("Output encontrado para editar:", output);
     
     if (output) {
       const editingOutputData = {
@@ -203,7 +215,6 @@ export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPubli
         url: output.address,
         streamKey: output.key
       };
-      console.log("Datos de edición preparados:", editingOutputData);
       setEditingOutput(editingOutputData);
       openEditModal();
     } else {
@@ -215,7 +226,6 @@ export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPubli
     e.preventDefault();
     if (editingOutput && editingOutput.nombre && editingOutput.url) {
       try {
-        console.log('Enviando actualización para:', editingOutput);
         
         // El ID ya debería estar corregido, pero por si acaso:
         const correctOutputId = editingOutput.id.replace(/^restreamer-ui:egress:rtmp:restreamer-ui:egress:rtmp:/, 'restreamer-ui:egress:rtmp:');
@@ -237,7 +247,6 @@ export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPubli
         }
 
         const responseText = await response.text();
-        console.log('Respuesta del servidor (texto):', responseText);
 
         let updatedOutput;
         try {
@@ -247,7 +256,6 @@ export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPubli
           throw new Error('La respuesta del servidor no es JSON válido');
         }
 
-        console.log('Respuesta del servidor (JSON):', updatedOutput);
 
         setLocalOutputs(prevOutputs => prevOutputs.map(output => 
           output.id === updatedOutput.updatedOutput.id ? updatedOutput.updatedOutput : output

@@ -7,6 +7,7 @@ import useInputs from "../../../hooks/useInputs";
 export default function InputPage({ params }) {
   const { user } = useAuth();
   const { 
+    inputs,
     agregarPuntoPublicacion, 
     eliminarPuntoPublicacion, 
     toggleOutputState,
@@ -96,6 +97,7 @@ export default function InputPage({ params }) {
     return <div className="text-center mt-8 text-red-500">{error}</div>;
   if (!input) return <div className="text-center mt-8">No input found</div>;
 
+  
   return (
     <div className="container mx-auto px-4 py-8">
       <InputDetails

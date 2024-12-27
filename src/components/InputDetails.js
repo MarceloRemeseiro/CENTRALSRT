@@ -46,37 +46,89 @@ const InputDetails = ({
     editarPuntoPublicacion
   );
 
+  const getStatusIcon = (state) => {
+    switch (state) {
+      case "running":
+        return (
+          <div className="flex items-center justify-end text-2xl">
+            <div className="w-4 h-4 mr-3 rounded-full bg-green-500 animate-pulse"></div>
+            <span className="font-semibold text-green-500">Activo</span>
+          </div>
+        );
+      case "finished":
+        return (
+          <div className="flex items-center justify-end text-2xl">
+            <div className="w-4 h-4 mr-3 rounded-full bg-blue-500"></div>
+            <span className="font-semibold text-blue-500">Finalizado</span>
+          </div>
+        );
+      case "failed":
+        return (
+          <div className="flex items-center justify-end text-2xl">
+            <div className="w-4 h-4 mr-3 rounded-full bg-red-500"></div>
+            <span className="font-semibold text-red-500">Error</span>
+          </div>
+        );
+      default:
+        return (
+          <div className="flex items-center justify-end text-2xl">
+            <div className="w-4 h-4 mr-3 rounded-full bg-gray-500"></div>
+            <span className="font-semibold text-gray-500">Desconocido</span>
+          </div>
+        );
+    }
+  };
+
   return (
     <div className="flex flex-col md:flex-row gap-6">
       <div className="md:w-2/3 space-y-6">
-        <div className="bg-gray-800 rounded-lg shadow-lg">
-          <div className="flex justify-between p-4 ">
-            <Link href="/" className="text-3xl">
-              ⬅️
+        <div className="bg-gray-800 rounded-lg shadow-lg p-6">
+          <div className="flex items-start justify-between mb-6">
+            <Link 
+              href="/" 
+              className="flex items-center text-gray-400 hover:text-blue-400 transition-colors group"
+            >
+              <span className="text-2xl mr-2 group-hover:transform group-hover:-translate-x-1 transition-transform">
+                ←
+              </span>
+              <span className="text-lg">Volver a Inputs</span>
             </Link>
-            <h2 className="text-3xl font-bold">{localInput.name}</h2>
-            <span className="text-2xl">{localInput.state === "running" ? "🟢" : "🔴"}</span>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex justify-between items-start">
+              <div className="space-y-2">
+                <h1 className="text-4xl font-bold text-white">
+                  {localInput.name}
+                </h1>
+                <p className="text-xl text-gray-400 leading-relaxed">
+                  {localInput.description || 'Sin descripción'}
+                </p>
+              </div>
+              <div className="ml-6">
+                {getStatusIcon(localInput.state)}
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
           <h2 className="text-2xl font-bold mb-4 text-white">Video Preview</h2>
           <VideoPlayer
-            url={localInput.defaultOutputs.HLS}
+            url={localInput.defaultOutputs?.HLS}
             isRunning={localInput.state === "running"}
             refreshTrigger={videoRefreshTrigger}
           />
         </div>
 
-        <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-          <InputData input={localInput} />
-          <InputInfo name={localInput.name} streamId={localInput.streamId} />
+       
+          <InputInfo data={localInput} />
           <OutputDefault defaultOutputs={localInput.defaultOutputs} />
-        </div>
+     
       </div>
 
       <div className="md:w-1/3">
-        <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+        <div className="bg-slate-800 p-6 rounded-lg shadow-lg">
           <h2 className="text-2xl font-bold mb-4 text-white">Custom Outputs</h2>
           <CustomOutputs
             localOutputs={localOutputs}

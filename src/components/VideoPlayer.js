@@ -4,71 +4,115 @@ import Hls from 'hls.js';
 const VideoPlayer = ({ url, isRunning, refreshTrigger }) => {
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
-  const [key, setKey] = useState(0);
-  const [hasVideo, setHasVideo] = useState(false);
-
+  const retryTimeoutRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  
   useEffect(() => {
-    setKey(prev => prev + 1);
-  }, [refreshTrigger]);
+    console.log('VideoPlayer - Props recibidas:');
+    console.log('- URL:', url);
+    console.log('- isRunning:', isRunning);
+    console.log('- refreshTrigger:', refreshTrigger);
 
-  useEffect(() => {
     let hls = hlsRef.current;
 
     const initPlayer = () => {
       if (isRunning && url && Hls.isSupported()) {
+        console.log('Iniciando reproductor HLS con URL:', url);
+        setIsPlaying(false);
+        setIsConnecting(true);
+        
         if (hls) {
           hls.destroy();
         }
+
         hls = new Hls({
-          debug: false,
           enableWorker: true,
           lowLatencyMode: true,
           backBufferLength: 90
+        });
+
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          console.log('Error HLS, reintentando en 5 segundos...');
+          setIsPlaying(false);
+          setIsConnecting(true);
+          if (retryTimeoutRef.current) {
+            clearTimeout(retryTimeoutRef.current);
+          }
+          retryTimeoutRef.current = setTimeout(initPlayer, 8000);
         });
 
         hls.loadSource(url);
         hls.attachMedia(videoRef.current);
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          videoRef.current.play().catch(e => console.log("Autoplay prevented:", e));
-          setHasVideo(true);
-        });
-
-        hls.on(Hls.Events.ERROR, (event, data) => {
-          if (data.fatal) {
-            setHasVideo(false);
-          }
+          console.log('Manifest parseado correctamente');
+          videoRef.current.play()
+            .then(() => {
+              console.log('Reproducción iniciada');
+              setIsPlaying(true);
+              setIsConnecting(false);
+            })
+            .catch(e => {
+              console.error("Error en autoplay:", e);
+              setIsPlaying(false);
+              setIsConnecting(false);
+            });
         });
 
         hlsRef.current = hls;
       } else {
-        setHasVideo(false);
+        setIsPlaying(false);
+        setIsConnecting(false);
       }
     };
 
-    initPlayer();
+    if (isRunning) {
+      console.log('Estado running detectado, esperando 5 segundos...');
+      setIsConnecting(true);
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+      retryTimeoutRef.current = setTimeout(initPlayer, 5000);
+    } else {
+      setIsPlaying(false);
+      setIsConnecting(false);
+    }
 
     return () => {
       if (hls) {
         hls.destroy();
       }
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+      setIsPlaying(false);
+      setIsConnecting(false);
     };
-  }, [url, isRunning, key]);
+  }, [url, isRunning, refreshTrigger]);
 
   return (
-    <div className="video-container relative" style={{ aspectRatio: '16 / 9', backgroundColor: '#0000ff' }}>
+    <div className="video-container relative" style={{ aspectRatio: '16 / 9', backgroundColor: '#000000' }}>
       <video
-        key={key}
         ref={videoRef}
         className="w-full h-full object-contain"
         controls
         playsInline
         muted
-        style={{ display: hasVideo ? 'block' : 'none' }}
+        style={{ display: isPlaying ? 'block' : 'none' }}
       />
-      {!hasVideo && (
-        <div className="absolute inset-0 flex items-center justify-center text-white text-2xl">
-          <p className="w-full text-center">NO HAY VIDEO DISPONIBLE</p>
+      {!isPlaying && (
+        <div className="absolute inset-0 flex items-center justify-center text-white">
+          <div className="text-center">
+            {isConnecting ? (
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <p className="text-lg">Conectando...</p>
+              </div>
+            ) : (
+              <p className="text-lg">NO HAY VIDEO DISPONIBLE</p>
+            )}
+          </div>
         </div>
       )}
     </div>

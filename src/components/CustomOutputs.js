@@ -34,12 +34,12 @@ const CustomOutputs = ({
       <h3 className="text-lg font-semibold mt-4 mb-2 text-white">
         PUNTOS DE PUBLICACIÓN
       </h3>
-      <div className="space-y-2">
+      <div className="space-y-2 text-neutral-800">
         {localOutputs.map((output, index) => (
-          <div key={output.id} className="bg-slate-800 p-3 rounded">
+          <div key={output.id} className="bg-neutral-400 p-3 rounded">
             <div className="flex justify-between items-center">
               <p>
-                <strong className="text-gray-300">Nombre:</strong> {output.name}
+                <strong className="">Nombre:</strong> {output.name}
               </p>
               <div
                 className={switchStyle(output)}
@@ -48,11 +48,11 @@ const CustomOutputs = ({
                 <span className={circleStyle(output)} />
               </div>
             </div>
-            <p className="text-sm break-all text-gray-400">
-              <strong className="text-gray-300">URL : </strong> {output.address}
+            <p className="text-sm break-all">
+              <strong >URL : </strong> {output.address}
             </p>
-            <p className="text-sm break-all text-gray-400">
-              <strong className="text-gray-300">KEY : </strong> {output.key}
+            <p className="text-sm break-all">
+              <strong>KEY : </strong> {output.key}
             </p>
             <div className="flex justify-between mt-2">
               <button
@@ -60,7 +60,7 @@ const CustomOutputs = ({
                   console.log("ID del output a editar:", output.id); // Añadir este log
                   handleEditarPunto(output.id);
                 }}
-                className="bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700 transition-colors mr-2"
+                className="bg-blue-600 text-xs px-2 py-1 rounded hover:bg-blue-700 transition-colors mr-2"
               >
                 Editar
               </button>

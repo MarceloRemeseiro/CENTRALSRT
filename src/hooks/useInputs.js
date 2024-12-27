@@ -118,6 +118,52 @@ const useInputs = () => {
     }
   }, []);
 
+  const updateInputMetadata = useCallback(async (inputId, { name, description }) => {
+    try {
+      const response = await fetch(`/api/process/${inputId}/metadata`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, description }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update input metadata');
+      }
+
+      const data = await response.json();
+
+      setInputs(prevInputs =>
+        prevInputs.map(input =>
+          input.id === inputId
+            ? {
+                ...input,
+                name,
+                description,
+                metadata: {
+                  ...input.metadata,
+                  'restreamer-ui': {
+                    ...input.metadata?.['restreamer-ui'],
+                    meta: {
+                      ...input.metadata?.['restreamer-ui']?.meta,
+                      name,
+                      description
+                    }
+                  }
+                }
+              }
+            : input
+        )
+      );
+
+      return data;
+    } catch (error) {
+      console.error('Error updating input metadata:', error);
+      throw error;
+    }
+  }, []);
+
   return { 
     inputs, 
     loading, 
@@ -125,7 +171,8 @@ const useInputs = () => {
     fetchInputs, 
     agregarPuntoPublicacion, 
     eliminarPuntoPublicacion, 
-    toggleOutputState 
+    toggleOutputState,
+    updateInputMetadata
   };
 };
 
