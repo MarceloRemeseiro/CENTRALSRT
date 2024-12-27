@@ -50,7 +50,8 @@ const ConnectionInfo = ({ data }) => {
       url: `srt://${srtUrl.hostname}`,
       port: srtUrl.port,
       mode: 'caller',
-      streamId: `${data.streamId},mode:publish`
+      streamId: `${data.streamId}.stream,mode:publish`,
+      id: `${data.streamId}`
     };
   };
 
@@ -60,7 +61,7 @@ const ConnectionInfo = ({ data }) => {
       return data.defaultOutputs.RTMP;
     }
     const details = getSRTDetails();
-    return `${details.url}:${details.port}?type=caller&streamid=${data.streamId},mode:publish`;
+    return `${details.url}:${details.port}?type=caller&streamid=${data.streamId}.stream,mode:publish`;
   };
 
   return (
@@ -143,6 +144,15 @@ const ConnectionInfo = ({ data }) => {
                 label="Copiar"
               />
             </div>
+          </div>
+        </div>
+        <div className="mt-4">
+          <div className="flex flex-col gap-2">
+            <span className="font-semibold">ID:</span>
+            <div className="flex items-center justify-between font-mono bg-black/30 p-2 rounded">
+              <span className="text-sm text-gray-300 break-all mr-4">{getSRTDetails().id}</span>
+                <CopyButton text={getSRTDetails().id} />
+              </div>
           </div>
         </div>
       </div>

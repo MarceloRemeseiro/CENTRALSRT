@@ -9,8 +9,8 @@ const OutputDefault = ({ defaultOutputs }) => {
       </h3>
       <div className="bg-slate-800 p-3 rounded mb-4">
         {Object.entries(defaultOutputs).map(([key, value]) => (
-          <div key={key} className="mb-2 flex items-center justify-between">
-            <div>
+          <div key={key} className="mb-2 flex items-center justify-between bg-black/30 p-2 rounded">
+            <div >
               <p>
                 <strong className="text-gray-300">{key}:</strong>
               </p>

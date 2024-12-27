@@ -61,7 +61,7 @@ function Home() {
     <div className="min-h-screen bg-gray-900">
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-white">Inputs</h1>
+          <h1 className="text-3xl font-bold text-white">STREAMING PRO / INPUTS</h1>
           <div className="flex items-center gap-4">
             <Link 
               href="/devices" 

@@ -153,9 +153,9 @@ export default function DevicesPage() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Dispositivos</h1>
-      {devices.length === 0 ? (
+    <div className="container mx-auto px-4 py-8">
+          <h1 className="text-3xl font-bold text-white">STREAMING PRO / DISPOSITIVOS</h1>
+          {devices.length === 0 ? (
         <p className="text-gray-500">No hay dispositivos conectados</p>
       ) : (
         <table className="table-auto border-collapse border border-gray-400 w-full">
