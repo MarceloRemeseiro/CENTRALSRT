@@ -39,7 +39,7 @@ const ConnectionInfo = ({ data }) => {
     const lastSlashIndex = rtmpUrl.lastIndexOf('/');
     return {
       baseUrl: rtmpUrl.substring(0, lastSlashIndex + 1),
-      streamKey: rtmpUrl.substring(lastSlashIndex + 1).replace('.stream', '')
+      streamKey: rtmpUrl.substring(lastSlashIndex + 1)
     };
   };
 

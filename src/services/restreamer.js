@@ -135,7 +135,7 @@ export async function restreamerAPIConnection() {
           type: isRTMP ? 'rtmp' : 'srt',  // Añadimos el tipo
           inputAddress: inputAddress,      // Añadimos la dirección original
           defaultOutputs: {
-            SRT: `srt://${RESTREAMER__URL}:${port}/?mode=caller&transtype=live&streamid=${streamId}.mode:request`,
+            SRT: `srt://${RESTREAMER__URL}:${port}/?mode=caller&transtype=live&streamid=${streamId},mode:request`,
             RTMP: `rtmp://${RESTREAMER__URL}/${streamId}.stream`,
             HLS: `https://${RESTREAMER__URL}/memfs/${streamId}.m3u8`,
             HTML: `https://${RESTREAMER__URL}/${streamId}.html`,
