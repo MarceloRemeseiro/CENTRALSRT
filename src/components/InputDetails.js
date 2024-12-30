@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import VideoPlayer from "./VideoPlayer";
 import InputInfo from "./InputInfo";
 import OutputDefault from "./OutputDefault";
@@ -16,6 +16,8 @@ const InputDetails = ({
   eliminarPuntoPublicacion,
   toggleOutputState,
   editarPuntoPublicacion,
+  onUpdate,
+  recargarOutputs,
 }) => {
   const {
     localInput,
@@ -34,10 +36,11 @@ const InputDetails = ({
     handleSubmit,
     handleEliminarPunto,
     handleToggle,
-    handleEditarPunto,
+    handleEditarPunto: handleEditarPuntoRTMP,
     handleUpdateOutput,
     setConfirmationModal,
     setEditingOutput,
+    updateSRTOutput,
   } = useInputLogic(
     input,
     agregarPuntoPublicacion,
@@ -45,6 +48,69 @@ const InputDetails = ({
     toggleOutputState,
     editarPuntoPublicacion
   );
+
+  const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
+  const [isSRTModalOpen, setIsSRTModalOpen] = useState(false);
+  const [srtFormData, setSrtFormData] = useState({
+    nombre: '',
+    url: '',
+    port: '',
+    latency: '',
+    streamId: '',
+    passphrase: ''
+  });
+  const [isEditSRTModalOpen, setIsEditSRTModalOpen] = useState(false);
+  const [editingSRTOutput, setEditingSRTOutput] = useState(null);
+
+  const handleSRTSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const data = {
+        type: 'srt',
+        metadata: {
+          'restreamer-ui': {
+            name: srtFormData.nombre,
+            settings: {
+              address: `${srtFormData.url}:${srtFormData.port}`,
+              protocol: 'srt://',
+              params: {
+                latency: srtFormData.latency || '200',
+                streamid: srtFormData.streamId || '',
+                passphrase: srtFormData.passphrase || '',
+                transtype: 'live',
+                mode: 'caller',
+                nakreport: true,
+                tlpktdrop: true,
+                ipttl: '64',
+                iptos: '0xB8',
+                oheadbw: '25'
+              }
+            }
+          }
+        }
+      };
+
+      console.log('Creando output SRT:', data);
+      
+      await agregarPuntoPublicacion(input.id, data);
+      setIsSRTModalOpen(false);
+      setSrtFormData({
+        nombre: '',
+        url: '',
+        port: '',
+        latency: '',
+        streamId: '',
+        passphrase: ''
+      });
+    } catch (error) {
+      console.error('Error al crear output SRT:', error);
+    }
+  };
+
+  const handleAddOutputClick = () => {
+    setIsTypeModalOpen(true);
+  };
 
   const getStatusIcon = (state) => {
     switch (state) {
@@ -76,6 +142,88 @@ const InputDetails = ({
             <span className="font-semibold text-gray-500">Desconocido</span>
           </div>
         );
+    }
+  };
+
+  const handleEditarPunto = (outputId) => {
+    const output = localOutputs.find(o => o.id === outputId);
+    if (!output) return;
+
+    if (output.address.toLowerCase().startsWith('srt://')) {
+      // Parsear la URL SRT para obtener los valores
+      try {
+        const url = new URL(output.address);
+        const params = new URLSearchParams(url.search);
+        
+        setSrtFormData({
+          nombre: output.name,
+          url: url.hostname,
+          port: url.port,
+          latency: params.get('latency') || '',
+          streamId: params.get('streamid') || '',
+          passphrase: params.get('passphrase') || ''
+        });
+        
+        setEditingSRTOutput(output);
+        setIsEditSRTModalOpen(true);
+      } catch (error) {
+        console.error('Error parsing SRT URL:', error);
+      }
+    } else {
+      // Usar la función original para RTMP
+      handleEditarPuntoRTMP(outputId);
+    }
+  };
+
+  const handleSRTEditSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const data = {
+        nombre: srtFormData.nombre,
+        settings: {
+          address: `${srtFormData.url}:${srtFormData.port}`,
+          params: {
+            latency: srtFormData.latency,
+            streamid: srtFormData.streamId || '',
+            passphrase: srtFormData.passphrase || '',
+            transtype: 'live'
+          },
+          protocol: 'srt://'
+        },
+        type: 'srt'
+      };
+
+      await updateSRTOutput(editingSRTOutput.id, data);
+
+      setIsEditSRTModalOpen(false);
+      setEditingSRTOutput(null);
+      setSrtFormData({
+        nombre: '',
+        url: '',
+        port: '',
+        latency: '',
+        streamId: '',
+        passphrase: ''
+      });
+    } catch (error) {
+      console.error('Error al editar output SRT:', error);
+    }
+  };
+
+  const debugProcess = async () => {
+    try {
+      const response = await fetch('/api/process/debug');
+      const data = await response.json();
+      console.log('Estructura del proceso:', data);
+      
+      // Buscar específicamente los outputs SRT
+      const srtOutputs = data.process.outputs.filter(output => 
+        output.address.startsWith('srt://')
+      );
+      console.log('Outputs SRT:', srtOutputs);
+    } catch (error) {
+      console.error('Error al obtener debug:', error);
     }
   };
 
@@ -137,13 +285,207 @@ const InputDetails = ({
             handleEditarPunto={handleEditarPunto}
           />
           <button
-            onClick={openModal}
+            onClick={handleAddOutputClick}
             className="mt-4 w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
           >
-            Agregar Punto de Publicación RTMP
+            Agregar Punto de Publicación
           </button>
         </div>
       </div>
+
+      {isTypeModalOpen && (
+        <Modal onClose={() => setIsTypeModalOpen(false)}>
+          <h2 className="text-xl font-bold mb-4">Seleccionar tipo de output</h2>
+          <div className="flex gap-4">
+            <button
+              onClick={() => {
+                setIsTypeModalOpen(false);
+                openModal();
+              }}
+              className="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+            >
+              RTMP
+            </button>
+            <button
+              onClick={() => {
+                setIsTypeModalOpen(false);
+                setIsSRTModalOpen(true);
+              }}
+              className="flex-1 bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition-colors"
+            >
+              SRT
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {isSRTModalOpen && (
+        <Modal onClose={() => setIsSRTModalOpen(false)}>
+          <h2 className="text-xl font-bold mb-4">AGREGAR SRT CALLER</h2>
+          <form onSubmit={handleSRTSubmit} className="space-y-4">
+            <div>
+              <label className="text-gray-400">Nombre *</label>
+              <input
+                type="text"
+                required
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.nombre}
+                onChange={(e) => setSrtFormData({...srtFormData, nombre: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-gray-400">URL *</label>
+              <input
+                type="text"
+                required
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.url}
+                onChange={(e) => setSrtFormData({...srtFormData, url: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-gray-400">Puerto *</label>
+              <input
+                type="number"
+                required
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.port}
+                onChange={(e) => setSrtFormData({...srtFormData, port: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-gray-400">Latency *</label>
+              <input
+                type="number"
+                required
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.latency}
+                onChange={(e) => setSrtFormData({...srtFormData, latency: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-gray-400">Stream ID (opcional)</label>
+              <input
+                type="text"
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.streamId}
+                onChange={(e) => setSrtFormData({...srtFormData, streamId: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-gray-400">Passphrase (opcional)</label>
+              <input
+                type="text"
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.passphrase}
+                onChange={(e) => setSrtFormData({...srtFormData, passphrase: e.target.value})}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsSRTModalOpen(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+              >
+                Agregar
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {isEditSRTModalOpen && (
+        <Modal onClose={() => {
+          setIsEditSRTModalOpen(false);
+          setEditingSRTOutput(null);
+        }}>
+          <h2 className="text-xl font-bold mb-4">EDITAR SRT CALLER</h2>
+          <form onSubmit={handleSRTEditSubmit} className="space-y-4">
+            <div>
+              <label className="text-gray-400">Nombre *</label>
+              <input
+                type="text"
+                required
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.nombre}
+                onChange={(e) => setSrtFormData({...srtFormData, nombre: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-gray-400">URL *</label>
+              <input
+                type="text"
+                required
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.url}
+                onChange={(e) => setSrtFormData({...srtFormData, url: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-gray-400">Puerto *</label>
+              <input
+                type="number"
+                required
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.port}
+                onChange={(e) => setSrtFormData({...srtFormData, port: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-gray-400">Latency *</label>
+              <input
+                type="number"
+                required
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.latency}
+                onChange={(e) => setSrtFormData({...srtFormData, latency: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-gray-400">Stream ID (opcional)</label>
+              <input
+                type="text"
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.streamId}
+                onChange={(e) => setSrtFormData({...srtFormData, streamId: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-gray-400">Passphrase (opcional)</label>
+              <input
+                type="text"
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.passphrase}
+                onChange={(e) => setSrtFormData({...srtFormData, passphrase: e.target.value})}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditSRTModalOpen(false);
+                  setEditingSRTOutput(null);
+                }}
+                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+              >
+                Guardar
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {isModalOpen && (
         <Modal onClose={closeModal}>
@@ -250,6 +592,13 @@ const InputDetails = ({
         }}
         message={confirmationModal.message}
       />
+
+      <button
+        onClick={debugProcess}
+        className="mt-4 bg-gray-600 text-white px-4 py-2 rounded"
+      >
+        Debug Process
+      </button>
     </div>
   );
 };

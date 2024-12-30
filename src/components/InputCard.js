@@ -48,6 +48,77 @@ const InputCard = ({
     editarPuntoPublicacion
   );
 
+  // Estados para SRT
+  const [isSRTModalOpen, setIsSRTModalOpen] = useState(false);
+  const [srtFormData, setSrtFormData] = useState({
+    nombre: '',
+    url: '',
+    port: '',
+    latency: '',
+    streamId: '',
+    passphrase: ''
+  });
+
+  // Estados para RTMP
+  const [rtmpFormData, setRtmpFormData] = useState({
+    nombre: '',
+    url: '',
+    streamKey: ''
+  });
+
+  const [editingSRTOutput, setEditingSRTOutput] = useState(null);
+  const [editingRTMPOutput, setEditingRTMPOutput] = useState(null);
+  const [isRTMPModalOpen, setIsRTMPModalOpen] = useState(false);
+  const [isEditRTMPModalOpen, setIsEditRTMPModalOpen] = useState(false);
+  const [isEditSRTModalOpen, setIsEditSRTModalOpen] = useState(false);
+
+  // Función para manejar el submit de SRT
+  const handleSRTSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const data = {
+        type: 'srt',
+        metadata: {
+          'restreamer-ui': {
+            name: srtFormData.nombre,
+            settings: {
+              address: `${srtFormData.url}:${srtFormData.port}`,
+              protocol: 'srt://',
+              params: {
+                latency: srtFormData.latency || '200',
+                streamid: srtFormData.streamId || '',
+                passphrase: srtFormData.passphrase || '',
+                transtype: 'live',
+                mode: 'caller',
+                nakreport: true,
+                tlpktdrop: true,
+                ipttl: '64',
+                iptos: '0xB8',
+                oheadbw: '25'
+              }
+            }
+          }
+        }
+      };
+
+      const result = await agregarPuntoPublicacion(input.id, data);
+      console.log('Output creado:', result);
+
+      setIsSRTModalOpen(false);
+      setSrtFormData({
+        nombre: '',
+        url: '',
+        port: '',
+        latency: '',
+        streamId: '',
+        passphrase: ''
+      });
+    } catch (error) {
+      console.error('Error al crear output SRT:', error);
+    }
+  };
+
   // Nuevo estado para el modal de edición de info
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [infoFormData, setInfoFormData] = useState({
@@ -56,8 +127,6 @@ const InputCard = ({
   });
 
   const getStatusIcon = (state) => {
-   
-    
     switch (state) {
       case "running":
         return (
@@ -81,7 +150,6 @@ const InputCard = ({
           </div>
         );
       default:
-        console.log('Estado no reconocido:', state);
         return (
           <div className="flex items-center text-gray-500">
             <div className="w-2 h-2 mr-2 rounded-full bg-gray-500"></div>
@@ -91,27 +159,19 @@ const InputCard = ({
     }
   };
 
-  // Determinar el tipo de input y su color de fondo
-  
   const isRTMP = input.type === 'rtmp';
   const cardBackground = isRTMP ? 'bg-blue-900' : 'bg-blue-950';
 
-  // Función para separar la URL RTMP y la streamkey
   const getRTMPDetails = (rtmpUrl) => {
     if (!rtmpUrl) return { baseUrl: '', streamKey: '' };
-    
-    // Encontrar la última ocurrencia de '/'
     const lastSlashIndex = rtmpUrl.lastIndexOf('/');
     if (lastSlashIndex === -1) return { baseUrl: rtmpUrl, streamKey: '' };
-
-    const baseUrl = rtmpUrl.substring(0, lastSlashIndex + 1); // Incluimos el '/'
+    const baseUrl = rtmpUrl.substring(0, lastSlashIndex + 1);
     const streamKey = rtmpUrl.substring(lastSlashIndex + 1).replace('.stream', '');
-
     return { baseUrl, streamKey };
   };
 
-  // Obtener URL base y streamkey
-  const { baseUrl, streamKey } = getRTMPDetails(input.defaultOutputs.RTMP);
+  const { baseUrl, streamKey } = getRTMPDetails(input.defaultOutputs?.RTMP);
 
   const handleInfoSubmit = async (e) => {
     e.preventDefault();
@@ -120,11 +180,8 @@ const InputCard = ({
       setIsInfoModalOpen(false);
     } catch (error) {
       console.error('Error updating input info:', error);
-      // Opcionalmente, mostrar un mensaje de error al usuario
-      alert('Error al actualizar la información. Por favor, intente nuevamente.');
     }
   };
-
 
   return (
     <div className={`${cardBackground} text-gray-200 shadow-lg rounded-lg p-6`}>
@@ -170,7 +227,6 @@ const InputCard = ({
           </p>
           <div className="mt-2 flex items-center justify-between">
             <div>{getStatusIcon(localInput?.state)}</div>
-        
           </div>
         </div>
       </div>
@@ -178,7 +234,6 @@ const InputCard = ({
       <div className="mb-4">
         <h3 className="text-lg font-semibold mb-2">Video Preview</h3>
         <div className="video-wrapper" style={{ aspectRatio: "16 / 9" }}>
-         
           <VideoPlayer
             url={localInput.defaultOutputs?.HLS}
             isRunning={localInput.state === "running"}
@@ -187,10 +242,7 @@ const InputCard = ({
         </div>
       </div>
 
-      <InputInfo 
-        data={input}
-        
-      />
+      <InputInfo data={input} />
       <OutputDefault defaultOutputs={input.defaultOutputs} />
       <CustomOutputs
         localOutputs={localOutputs}
@@ -198,15 +250,23 @@ const InputCard = ({
         handleToggle={handleToggle}
         handleEditarPunto={handleEditarPunto}
       />
-      <div className="flex justify-center mt-4">
+
+      <div className="flex justify-center mt-4 space-x-4">
         <button
           onClick={openModal}
-          className="flex justify-center mt-4 w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+          className="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
         >
-          Agregar Punto de Publicación RTMP
+          Agregar RTMP
+        </button>
+        <button
+          onClick={() => setIsSRTModalOpen(true)}
+          className="flex-1 bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition-colors"
+        >
+          Agregar SRT
         </button>
       </div>
 
+      {/* Modal RTMP */}
       {isModalOpen && (
         <Modal onClose={closeModal}>
           <h2 className="text-xl font-bold mb-4">Agregar RTMP</h2>
@@ -223,7 +283,7 @@ const InputCard = ({
               />
             </div>
             <div>
-              <label className="text-gray-800">URL</label>
+              <label className="text-gray-400">URL</label>
               <input
                 type="text"
                 className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
@@ -247,6 +307,79 @@ const InputCard = ({
             <button
               type="submit"
               className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+            >
+              Agregar
+            </button>
+          </form>
+        </Modal>
+      )}
+
+      {/* Modal SRT */}
+      {isSRTModalOpen && (
+        <Modal onClose={() => setIsSRTModalOpen(false)}>
+          <h2 className="text-xl font-bold mb-4">Agregar SRT</h2>
+          <form onSubmit={handleSRTSubmit} className="space-y-4">
+            <div>
+              <label className="text-gray-400">Nombre</label>
+              <input
+                type="text"
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.nombre}
+                onChange={(e) => setSrtFormData({...srtFormData, nombre: e.target.value})}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-gray-400">URL</label>
+              <input
+                type="text"
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.url}
+                onChange={(e) => setSrtFormData({...srtFormData, url: e.target.value})}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-gray-400">Puerto</label>
+              <input
+                type="text"
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.port}
+                onChange={(e) => setSrtFormData({...srtFormData, port: e.target.value})}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-gray-400">Latencia (ms)</label>
+              <input
+                type="text"
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.latency}
+                onChange={(e) => setSrtFormData({...srtFormData, latency: e.target.value})}
+                placeholder="200"
+              />
+            </div>
+            <div>
+              <label className="text-gray-400">Stream ID</label>
+              <input
+                type="text"
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.streamId}
+                onChange={(e) => setSrtFormData({...srtFormData, streamId: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-gray-400">Passphrase</label>
+              <input
+                type="password"
+                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
+                value={srtFormData.passphrase}
+                onChange={(e) => setSrtFormData({...srtFormData, passphrase: e.target.value})}
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
             >
               Agregar
             </button>

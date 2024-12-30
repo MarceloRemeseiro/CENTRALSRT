@@ -55,8 +55,8 @@ export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPubli
 
   // Efecto para sincronizar cuando cambia el input
   useEffect(() => {
-  
     setLocalInput(input);
+    setLocalOutputs(input.customOutputs || []); // Asegurarnos de actualizar también los outputs
   }, [input]);
 
   useEffect(() => {
@@ -224,49 +224,44 @@ export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPubli
 
   const handleUpdateOutput = async (e) => {
     e.preventDefault();
-    if (editingOutput && editingOutput.nombre && editingOutput.url) {
+    if (editingOutput) {
       try {
-        
-        // El ID ya debería estar corregido, pero por si acaso:
-        const correctOutputId = editingOutput.id.replace(/^restreamer-ui:egress:rtmp:restreamer-ui:egress:rtmp:/, 'restreamer-ui:egress:rtmp:');
-        
-        const response = await fetch(`/api/process/${input.id}/outputs/${correctOutputId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            nombre: editingOutput.nombre,
-            url: editingOutput.url,
-            streamKey: editingOutput.streamKey,
-          }),
+        const updatedOutput = await editarPuntoPublicacion(input.id, editingOutput.id, {
+          nombre: editingOutput.nombre,
+          url: editingOutput.url,
+          streamKey: editingOutput.streamKey
         });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        // Actualizar el estado local
+        setLocalOutputs(prevOutputs => 
+          prevOutputs.map(output => 
+            output.id === editingOutput.id ? updatedOutput : output
+          )
+        );
 
-        const responseText = await response.text();
-
-        let updatedOutput;
-        try {
-          updatedOutput = JSON.parse(responseText);
-        } catch (error) {
-          console.error('Error al parsear la respuesta JSON:', error);
-          throw new Error('La respuesta del servidor no es JSON válido');
-        }
-
-
-        setLocalOutputs(prevOutputs => prevOutputs.map(output => 
-          output.id === updatedOutput.updatedOutput.id ? updatedOutput.updatedOutput : output
-        ));
         closeEditModal();
       } catch (error) {
-        console.error('Error detallado al editar el punto de publicación:', error);
-        alert(`Error al editar el punto de publicación: ${error.message}`);
+        console.error('Error al editar output:', error);
       }
-    } else {
-      alert('Por favor, complete al menos el nombre y la URL.');
+    }
+  };
+
+  // Añadir método específico para actualizar outputs SRT
+  const updateSRTOutput = async (outputId, data) => {
+    try {
+      const updatedOutput = await editarPuntoPublicacion(input.id, outputId, data);
+      
+      // Actualizar el estado local
+      setLocalOutputs(prevOutputs => 
+        prevOutputs.map(output => 
+          output.id === outputId ? updatedOutput : output
+        )
+      );
+
+      return updatedOutput;
+    } catch (error) {
+      console.error('Error al actualizar output SRT:', error);
+      throw error;
     }
   };
 
@@ -274,6 +269,7 @@ export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPubli
     localInput,
     setLocalInput,
     localOutputs,
+    setLocalOutputs,
     isModalOpen,
     isEditModalOpen,
     videoRefreshTrigger,
@@ -292,5 +288,6 @@ export const useInputLogic = (input, agregarPuntoPublicacion, eliminarPuntoPubli
     handleUpdateOutput,
     setConfirmationModal,
     setEditingOutput,
+    updateSRTOutput, // Exportar el nuevo método
   };
 };

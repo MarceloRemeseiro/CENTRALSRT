@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useState, useCallback } from 'react';
 import EditNameModal from '@/components/EditNameModal';
+import Link from 'next/link';
 
 export default function DevicesPage() {
   const [devices, setDevices] = useState([]);
@@ -153,8 +154,17 @@ export default function DevicesPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-          <h1 className="text-3xl font-bold text-white mt-8">STREAMING PRO / DISPOSITIVOS</h1>
+    <div className="container mx-auto px-4 py-4">
+      <Link 
+              href="/" 
+              className="flex items-center text-gray-400 hover:text-blue-400 transition-colors group mb-4"
+            >
+              <span className="text-2xl mr-2 group-hover:transform group-hover:-translate-x-1 transition-transform">
+                ←
+              </span>
+              <span className="text-lg">Volver a Inputs</span>
+            </Link>
+          <h1 className="text-3xl font-bold text-white mb-8">STREAMING PRO / DISPOSITIVOS</h1>
           {devices.length === 0 ? (
         <p className="text-gray-500">No hay dispositivos conectados</p>
       ) : (

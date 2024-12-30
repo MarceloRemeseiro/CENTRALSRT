@@ -15,125 +15,170 @@ export async function GET() {
 
 export async function POST(request, { params }) {
   const { id } = params;
-  const { name, address, streamKey } = await request.json();
+  let data;
 
   try {
-    // Eliminar 'restreamer-ui:ingest:' del id si está presente
+    data = await request.json();
+    console.log("1. Datos recibidos:", JSON.stringify(data, null, 2));
+
+    // Validación inicial de datos
+    if (!data || !data.type) {
+      throw new Error('Tipo de output no especificado');
+    }
+
     const referenceId = id.replace("restreamer-ui:ingest:", "");
     const idAleatorio = uuid();
-    const outputId = `restreamer-ui:egress:rtmp:${idAleatorio}`;
 
-    // Crear el nuevo proceso con los parámetros requeridos
-    const newOutput = {
-      id: outputId,
-      type: "ffmpeg",
-      reference: referenceId,
-      input: [
-        {
+    let newOutput;
+    let metadata;
+
+    if (data.type === 'srt') {
+      // Validación de datos SRT
+      if (!data.metadata?.['restreamer-ui']?.settings?.address) {
+        throw new Error('SRT address is required');
+      }
+
+      const outputId = `restreamer-ui:egress:srt:${idAleatorio}`;
+      const srtSettings = data.metadata['restreamer-ui'].settings;
+      const srtAddress = `srt://${srtSettings.address}?${new URLSearchParams(srtSettings.params).toString()}`;
+      
+      console.log("2. Construyendo SRT address:", srtAddress);
+
+      newOutput = {
+        id: outputId,
+        type: "ffmpeg",
+        reference: referenceId,
+        input: [{
           id: "input_0",
           address: `{memfs}/${referenceId}.m3u8`,
-          options: ["-re"],
-        },
-      ],
-      output: [
-        {
+          options: ["-re"]
+        }],
+        output: [{
           id: "output_0",
-          address: address,
+          address: srtAddress,
           options: [
-            "-map",
-            "0:0",
-            "-codec:v",
-            "copy",
-            "-map",
-            "0:1",
-            "-codec:a",
-            "copy",
-            "-f",
-            "flv",
-            "-rtmp_enhanced_codecs",
-            "hvc1,av01,vp09",
-            "-rtmp_playpath",
-            streamKey,
-            "-rtmp_flashver",
-            "FMLE/3.0",
-          ],
-        },
-      ],
-      options: ["-loglevel", "level+info", "-err_detect", "ignore_err"],
-      reconnect: true,
-      reconnect_delay_seconds: 15,
-      autostart: false,
-      stale_timeout_seconds: 30,
-    };
+            "-map", "0:0",
+            "-codec:v", "copy",
+            "-map", "0:1",
+            "-codec:a", "copy",
+            "-bsf:v", "dump_extra",
+            "-f", "mpegts"
+          ]
+        }],
+        options: ["-loglevel", "level+info", "-err_detect", "ignore_err"],
+        reconnect: true,
+        reconnect_delay_seconds: 15,
+        autostart: false,
+        stale_timeout_seconds: 30
+      };
 
-    console.log(
-      "Creando proceso en Restreamer API:",
-      JSON.stringify(newOutput, null, 2)
-    );
+      metadata = data.metadata['restreamer-ui'];
 
-    // Crear el proceso
+    } else {
+      // Validación RTMP
+      if (!data.address) {
+        throw new Error('RTMP address is required');
+      }
+
+      // Configuración para RTMP (mantener el código existente)
+      const outputId = `restreamer-ui:egress:rtmp:${idAleatorio}`;
+      newOutput = {
+        id: outputId,
+        type: "ffmpeg",
+        reference: referenceId,
+        input: [{
+          id: "input_0",
+          address: `{memfs}/${referenceId}.m3u8`,
+          options: ["-re"]
+        }],
+        output: [{
+          id: "output_0",
+          address: `${data.address}/${data.streamKey}`,
+          options: [
+            "-map", "0:0",
+            "-codec:v", "copy",
+            "-map", "0:1",
+            "-codec:a", "copy",
+            "-f", "flv"
+          ]
+        }],
+        options: ["-loglevel", "level+info", "-err_detect", "ignore_err"],
+        reconnect: true,
+        reconnect_delay_seconds: 15,
+        autostart: false,
+        stale_timeout_seconds: 30
+      };
+
+      metadata = {
+        name: data.name,
+        outputs: [{
+          address: data.address,
+          options: [
+            "-f", "flv",
+            "-rtmp_enhanced_codecs", "hvc1,av01,vp09",
+            "-rtmp_playpath", data.streamKey,
+            "-rtmp_flashver", "FMLE/3.0"
+          ]
+        }],
+        settings: {
+          address: new URL(data.address).hostname,
+          protocol: "rtmp://",
+          options: {
+            rtmp_playpath: data.streamKey,
+            rtmp_flashver: "FMLE/3.0"
+          }
+        }
+      };
+    }
+
+    console.log("3. Configuración a enviar:", JSON.stringify(newOutput, null, 2));
+    console.log("4. Metadata a enviar:", JSON.stringify(metadata, null, 2));
+
     const createdEgressProcess = await authenticatedRequest(
       "POST",
       "/api/v3/process",
       newOutput
     );
 
-    // Extraer el ID del proceso creado
-    const processId = createdEgressProcess.id;
+    console.log("5. Proceso creado:", JSON.stringify(createdEgressProcess, null, 2));
 
-    // Metadata que queremos añadir después de crear el proceso
-    const metadata = {
-      name: name || "default-name",
-      outputs: [
-        {
-          address: address || "rtmp://default-url",
-          options: [
-            "-f",
-            "flv",
-            "-rtmp_enhanced_codecs",
-            "hvc1,av01,vp09",
-            "-rtmp_playpath",
-            streamKey || "default-stream-key",
-            "-rtmp_flashver",
-            "FMLE/3.0",
-          ],
-        },
-      ],
-      settings: {
-        address: new URL(address).hostname,
-        protocol: "rtmp://",
-        options: {
-          rtmp_playpath: streamKey || "default-stream-key",
-          rtmp_flashver: "FMLE/3.0",
-        },
-      },
-    };
-
-    console.log("Añadiendo metadata:", JSON.stringify(metadata, null, 2));
-
-    // Añadir la metadata usando el endpoint PUT
     await authenticatedRequest(
       "PUT",
-      `/api/v3/process/${processId}/metadata/restreamer-ui`,
+      `/api/v3/process/${createdEgressProcess.id}/metadata/restreamer-ui`,
       metadata
     );
 
-    // Formatear el output final
-    const formattedOutput = {
-      id: `restreamer-ui:egress:rtmp:${processId}`,
-      name: name,
-      address: address,
+    const formattedOutput = data.type === 'srt' ? {
+      id: createdEgressProcess.id,
+      name: metadata.name,
+      address: newOutput.output[0].address,
       state: createdEgressProcess.state?.exec || "unknown",
-      key: streamKey,
+      order: "stop",
+      key: "--",
+      type: 'srt'
+    } : {
+      id: createdEgressProcess.id,
+      name: data.name,
+      address: data.address,
+      state: createdEgressProcess.state?.exec || "unknown",
+      order: "stop",
+      key: data.streamKey
     };
 
     return NextResponse.json(formattedOutput);
+
   } catch (error) {
-    console.error("Detalles del error:", error.response?.data.details);
+    console.error("Error detallado:", {
+      message: error.message,
+      stack: error.stack,
+      data: data,
+      params: params
+    });
     return NextResponse.json(
       {
         error: "Error al agregar el output o la metadata",
-        details: error.response?.data || error.message,
+        details: error.message,
+        data: data
       },
       { status: 500 }
     );

@@ -26,33 +26,47 @@ const useInputs = () => {
     }
   }, []);
 
-  const agregarPuntoPublicacion = useCallback(async (inputId, { nombre, url, streamKey }) => {
+  const agregarPuntoPublicacion = async (inputId, data) => {
     try {
-      const response = await fetch(`/api/process/${inputId}/outputs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: nombre, address: url, streamKey }),
-      });
+      const response = await fetch(
+        `/api/process/${inputId}/outputs`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        }
+      );
+
       if (!response.ok) {
-        throw new Error("Failed to add publication point");
+        const errorData = await response.json();
+        throw new Error(errorData.details || 'Failed to add publication point');
       }
-      const newOutput = await response.json();
-      setInputs((prevInputs) =>
-        prevInputs.map((input) =>
+
+      const result = await response.json();
+      console.log('Resultado del backend:', result);
+
+      setInputs(prevInputs =>
+        prevInputs.map(input =>
           input.id === inputId
             ? {
                 ...input,
-                customOutputs: [...(input.customOutputs || []), newOutput],
+                customOutputs: [
+                  ...(input.customOutputs || []),
+                  result
+                ]
               }
             : input
         )
       );
-      return newOutput;
-    } catch (err) {
-      console.error("Error adding publication point:", err);
-      return null;
+
+      return result;
+    } catch (error) {
+      console.error('Error adding publication point:', error);
+      throw error;
     }
-  }, []);
+  };
 
   const eliminarPuntoPublicacion = useCallback(async (inputId, outputId) => {
     try {
@@ -164,6 +178,36 @@ const useInputs = () => {
     }
   }, []);
 
+  const editarPuntoPublicacion = async (inputId, outputId, data) => {
+    try {
+      console.log('Enviando datos al backend:', {
+        inputId,
+        outputId,
+        data
+      });
+
+      const response = await fetch(`/api/process/${inputId}/outputs/${outputId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Error del servidor:', errorData);
+        throw new Error(errorData.message || 'Error al editar el punto de publicación');
+      }
+
+      const updatedOutput = await response.json();
+      return updatedOutput;
+    } catch (error) {
+      console.error('Error:', error);
+      throw error;
+    }
+  };
+
   return { 
     inputs, 
     loading, 
@@ -172,7 +216,8 @@ const useInputs = () => {
     agregarPuntoPublicacion, 
     eliminarPuntoPublicacion, 
     toggleOutputState,
-    updateInputMetadata
+    updateInputMetadata,
+    editarPuntoPublicacion
   };
 };
 

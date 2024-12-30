@@ -1,9 +1,10 @@
 // src/services/restreamer.js
 import axios from "axios";
 import https from "https";
+import { config } from "process";
 
-const RESTREAMER_API_URL = "https://streamingpro.es";
-const RESTREAMER__URL = "streamingpro.es";
+const RESTREAMER_API_URL = "https://core.streamingpro.es";
+const RESTREAMER__URL = "core.streamingpro.es";
 const port = "6000";
 const RESTREAMER_USERNAME = "admin";
 const RESTREAMER_PASSWORD = "Lumar1234";
@@ -112,7 +113,16 @@ async function authenticatedRequest(method, url, data = null) {
 export async function restreamerAPIConnection() {
   try {
     const data = await authenticatedRequest("GET", "/api/v3/process");
+    console.log('Datos de la API:', data);
     
+    // Debug: Mostrar solo los procesos de tipo egress
+   /*  const egressProcesses = data.filter(process => process.id.includes(':egress:'));
+    console.log('Procesos egress:', egressProcesses[1].config.output[0].address);
+    console.log('Procesos egress:', egressProcesses[0].config.output[0].options);
+    console.log('Procesos egress completo :', egressProcesses[0]); */
+
+
+
     // Primera pasada: procesamos los inputs
     const inputs = data.reduce((acc, process) => {
       if (
@@ -163,7 +173,7 @@ export async function restreamerAPIConnection() {
             address:process.config?.output?.[0]?.address || "Dirección no disponible",
             state: process.state?.exec || "Desconocido",
             order: process.state?.order || "Desconocido",
-            key: process.config?.output?.[0]?.options?.[13] || "--", // Validación para evitar errores
+            key: process.config?.output?.[0]?.options?.[13] || "NADA", // Validación para evitar errores
           };
 
           // Añadir el output al input correspondiente

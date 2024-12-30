@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import InputDetails from "../../../components/InputDetails";
 import useAuth from "../../../hooks/useAuth";
 import useInputs from "../../../hooks/useInputs";
+import Link from 'next/link';
 
 export default function InputPage({ params }) {
   const { user } = useAuth();
@@ -40,51 +41,27 @@ export default function InputPage({ params }) {
     }
   };
 
-  const handleAgregarPuntoPublicacion = async (inputId, data) => {
-    const newOutput = await agregarPuntoPublicacion(inputId, data);
-    if (newOutput) {
-      setInput((prevInput) => ({
-        ...prevInput,
-        customOutputs: [...(prevInput.customOutputs || []), newOutput],
-      }));
-    }
-    return newOutput;
-  };
-
-  const handleEliminarPuntoPublicacion = async (inputId, outputId) => {
-    await eliminarPuntoPublicacion(inputId, outputId);
-    setInput((prevInput) => ({
-      ...prevInput,
-      customOutputs: prevInput.customOutputs.filter(
-        (output) => output.id !== outputId
-      ),
-    }));
-  };
-
-  const handleToggleOutputState = async (outputId, newState) => {
-    const updatedOutput = await toggleOutputState(outputId, newState);
-    setInput((prevInput) => ({
-      ...prevInput,
-      customOutputs: prevInput.customOutputs.map((output) =>
-        output.id === outputId
-          ? { ...output, state: updatedOutput.state }
-          : output
-      ),
-    }));
-    return updatedOutput;
-  };
-
   const handleEditarPuntoPublicacion = async (inputId, outputId, data) => {
-    const updatedOutput = await editarPuntoPublicacion(inputId, outputId, data);
-    if (updatedOutput) {
-      setInput((prevInput) => ({
-        ...prevInput,
-        customOutputs: prevInput.customOutputs.map((output) =>
-          output.id === outputId ? { ...output, ...updatedOutput } : output
-        ),
-      }));
+    try {
+      if (typeof editarPuntoPublicacion !== 'function') {
+        throw new Error('editarPuntoPublicacion no está definida');
+      }
+
+      const updatedOutput = await editarPuntoPublicacion(inputId, outputId, data);
+      if (updatedOutput) {
+        setInput((prevInput) => ({
+          ...prevInput,
+          customOutputs: prevInput.customOutputs.map((output) =>
+            output.id === outputId ? { ...output, ...data } : output
+          ),
+        }));
+        await fetchInput();
+      }
+      return updatedOutput;
+    } catch (error) {
+      console.error('Error al editar punto de publicación:', error);
+      throw error;
     }
-    return updatedOutput;
   };
 
   if (loading)
@@ -97,14 +74,30 @@ export default function InputPage({ params }) {
     return <div className="text-center mt-8 text-red-500">{error}</div>;
   if (!input) return <div className="text-center mt-8">No input found</div>;
 
-  
   return (
     <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-white">Detalles del Input</h1>
+        <div className="flex items-center gap-4">
+          <Link 
+            href="/devices" 
+            className="text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            Ver dispositivos
+          </Link>
+          <Link 
+            href="/" 
+            className="text-gray-400 hover:text-gray-300 transition-colors"
+          >
+            Volver a Inputs
+          </Link>
+        </div>
+      </div>
       <InputDetails
         input={input}
-        agregarPuntoPublicacion={handleAgregarPuntoPublicacion}
-        eliminarPuntoPublicacion={handleEliminarPuntoPublicacion}
-        toggleOutputState={handleToggleOutputState}
+        agregarPuntoPublicacion={agregarPuntoPublicacion}
+        eliminarPuntoPublicacion={eliminarPuntoPublicacion}
+        toggleOutputState={toggleOutputState}
         editarPuntoPublicacion={handleEditarPuntoPublicacion}
       />
     </div>
