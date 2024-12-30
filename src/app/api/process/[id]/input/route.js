@@ -28,10 +28,10 @@ export async function GET(request, { params }) {
       type: inputData.config?.input?.[0]?.address?.startsWith('{rtmp') ? 'rtmp' : 'srt',
       inputAddress: inputData.config?.input?.[0]?.address,
       defaultOutputs: {
-        SRT: `srt://streamingpro.es:6000/?mode=caller&transtype=live&streamid=${inputData.reference},mode:request`,
-        RTMP: `rtmp://streamingpro.es/${inputData.reference}.stream`,
-        HLS: `https://streamingpro.es/memfs/${inputData.reference}.m3u8`,
-        HTML: `https://streamingpro.es/${inputData.reference}.html`,
+        SRT: `srt://core.streamingpro.es:6000/?mode=caller&transtype=live&streamid=${inputData.reference},mode:request`,
+        RTMP: `rtmp://core.streamingpro.es/${inputData.reference}.stream`,
+        HLS: `https://core.streamingpro.es/memfs/${inputData.reference}.m3u8`,
+        HTML: `https://core.streamingpro.es/${inputData.reference}.html`,
       },
       customOutputs: customOutputs.map(output => ({
         id: output.id,

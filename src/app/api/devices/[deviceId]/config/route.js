@@ -24,7 +24,7 @@ export async function GET(request, { params }) {
                 .replace('restreamer-ui:ingest:', '')
                 .replace('?mode=request', '');
             
-            srt_url = `srt://streamingpro.es:6000/?mode=caller&transtype=live&streamid=${streamId}`;
+            srt_url = `srt://core.streamingpro.es:6000/?mode=caller&transtype=live&streamid=${streamId}`;
         }
 
         return NextResponse.json({ 

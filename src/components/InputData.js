@@ -7,7 +7,7 @@ export default function InputData({ input }) {
         <div>
           <p className="text-gray-400 font-semibold">URL</p>
           <p className="text-sm text-gray-300 break-all">
-            {input.url || "srt://streamingpro.es"}
+            {input.url || "srt://core.streamingpro.es"}
           </p>
         </div>
         <div>

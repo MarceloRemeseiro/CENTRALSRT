@@ -68,7 +68,7 @@ export default function DevicesPage() {
             .replace('restreamer-ui:ingest:', '')
             .replace('?mode=request', '');
             
-          srtUrl = `srt://streamingpro.es:6000/?mode=caller&transtype=live&streamid=${streamId}`;
+          srtUrl = `srt://core.streamingpro.es:6000/?mode=caller&transtype=live&streamid=${streamId}`;
         }
       }
 
