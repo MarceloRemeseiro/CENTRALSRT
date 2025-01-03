@@ -5,11 +5,11 @@ import VideoPlayer from "./VideoPlayer";
 import OutputDefault from "./OutputDefault";
 import CustomOutputs from "./CustomOutputs";
 import InputInfo from "./InputInfo";
-import InputData from "./InputData";
 import Link from "next/link";
 import { useInputLogic } from "../hooks/useInputLogic";
 import RTMPModal from './modals/RTMPModal';
 import useRTMPOutputs from '@/hooks/useRTMPOutputs';
+import StatusIndicator from './status/StatusIndicator';
 
 const InputCard = ({
   input,
@@ -89,22 +89,12 @@ const InputCard = ({
     }
     setIsRTMPModalOpen(true);
   };
-
   const closeRTMPModal = () => {
     setIsRTMPModalOpen(false);
     setRtmpFormData({ nombre: '', url: '', streamKey: '' });
     setIsEditing(false);
     setCurrentOutputId(null);
   };
-
-  const handleRTMPChange = (e) => {
-    const { name, value } = e.target;
-    setRtmpFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
   const handleRTMPSubmit = async (e, data) => {
     e.preventDefault();
     try {
@@ -115,7 +105,13 @@ const InputCard = ({
       console.error('Error:', error);
     }
   };
-
+  const handleRTMPChange = (e) => {
+    const { name, value } = e.target;
+    setRtmpFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
   const handleUpdateOutput = async (e, data) => {
     e.preventDefault();
     try {
@@ -138,64 +134,6 @@ const InputCard = ({
       console.error('Error completo:', error);
     }
   };
-
-  const getStatusIcon = (state) => {
-    switch (state) {
-      case "running":
-        return (
-          <div className="flex items-center text-green-500">
-            <div className="w-2 h-2 mr-2 rounded-full bg-green-500 animate-pulse"></div>
-            Activo
-          </div>
-        );
-      case "finished":
-        return (
-          <div className="flex items-center text-blue-500">
-            <div className="w-2 h-2 mr-2 rounded-full bg-blue-500"></div>
-            Finalizado
-          </div>
-        );
-      case "failed":
-        return (
-          <div className="flex items-center text-red-500">
-            <div className="w-2 h-2 mr-2 rounded-full bg-red-500"></div>
-            Error
-          </div>
-        );
-      default:
-        return (
-          <div className="flex items-center text-gray-500">
-            <div className="w-2 h-2 mr-2 rounded-full bg-gray-500"></div>
-            Desconocido
-          </div>
-        );
-    }
-  };
-
-  const isRTMP = input.type === 'rtmp';
-  const cardBackground = isRTMP ? 'bg-blue-900' : 'bg-blue-950';
-
-  const getRTMPDetails = (rtmpUrl) => {
-    if (!rtmpUrl) return { baseUrl: '', streamKey: '' };
-    const lastSlashIndex = rtmpUrl.lastIndexOf('/');
-    if (lastSlashIndex === -1) return { baseUrl: rtmpUrl, streamKey: '' };
-    const baseUrl = rtmpUrl.substring(0, lastSlashIndex + 1);
-    const streamKey = rtmpUrl.substring(lastSlashIndex + 1).replace('.stream', '');
-    return { baseUrl, streamKey };
-  };
-
-  const { baseUrl, streamKey } = getRTMPDetails(input.defaultOutputs?.RTMP);
-
-  const handleInfoSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await updateInputMetadata(input.id, infoFormData);
-      setIsInfoModalOpen(false);
-    } catch (error) {
-      console.error('Error updating input info:', error);
-    }
-  };
-
   const handleOpenRTMPEdit = (outputId) => {
     const output = localOutputs.find(o => o.id === outputId);
     console.log('Editando output:', output);
@@ -210,12 +148,26 @@ const InputCard = ({
       setIsRTMPModalOpen(true);
     }
   };
+ 
+  const isRTMP = input.type === 'rtmp';
+  const cardBackground = isRTMP ? 'bg-blue-900' : 'bg-blue-950';
+  
+// Info Modal
+  const handleInfoSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await updateInputMetadata(input.id, infoFormData);
+      setIsInfoModalOpen(false);
+    } catch (error) {
+      console.error('Error updating input info:', error);
+    }
+  };
 
   return (
     <div className={`${cardBackground} text-gray-200 shadow-lg rounded-lg p-6`}>
       <div className="flex justify-between items-start mb-4">
         <div className="flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex justify-between items-center gap-2">
             <Link 
               href={`/input/${input.id}`}
               className="hover:text-blue-400 transition-colors"
@@ -224,7 +176,8 @@ const InputCard = ({
                 {localInput?.name || 'Sin nombre'}
               </h2>
             </Link>
-            <button 
+            <span className="flex-1 text-gray-400">
+              <button 
               onClick={() => {
                 setInfoFormData({
                   name: input?.name || '',
@@ -249,13 +202,15 @@ const InputCard = ({
                 />
               </svg>
             </button>
+            </span>
+          <div className="mt-2 text-xl flex items-center justify-between">
+            <StatusIndicator state={localInput?.state} />
+          </div>
           </div>
           <p className="text-gray-400">
             {localInput?.description || 'Sin descripción'}
           </p>
-          <div className="mt-2 flex items-center justify-between">
-            <div>{getStatusIcon(localInput?.state)}</div>
-          </div>
+          
         </div>
       </div>
 
