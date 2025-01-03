@@ -35,15 +35,28 @@ const useRTMPOutputs = () => {
     setError(null);
 
     try {
+      console.log('Actualizando RTMP:', { inputId, outputId, data });
+      
       const endpoint = `/api/process/${inputId}/outputs/${outputId}`;
       const response = await axios.put(endpoint, {
         url: data.url,
         streamKey: data.streamKey,
-        name: data.nombre
+        nombre: data.nombre
       });
 
-      return response.data;
+      console.log('Respuesta actualización:', response.data);
+      
+      // Asegurarnos de que devolvemos el output con el formato correcto
+      return {
+        id: outputId,
+        name: data.nombre,
+        address: data.url,
+        streamKey: data.streamKey,
+        state: response.data.updatedOutput.state,
+        type: 'rtmp'
+      };
     } catch (error) {
+      console.error('Error al actualizar:', error);
       setError(error.message || 'Error al actualizar output RTMP');
       throw error;
     } finally {

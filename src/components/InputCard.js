@@ -39,8 +39,8 @@ const InputCard = ({
     handleSubmit,
     handleEliminarPunto,
     handleToggle,
-    handleEditarPunto: handleEditarPuntoOriginal,
-    handleUpdateOutput,
+    handleEditarPuntoOriginal,
+    handleUpdateOutputFromHook,
     setConfirmationModal,
     setEditingOutput,
   } = useInputLogic(
@@ -105,27 +105,37 @@ const InputCard = ({
     }));
   };
 
-  const handleRTMPSubmit = async (e, formData) => {
+  const handleRTMPSubmit = async (e, data) => {
+    e.preventDefault();
     try {
-      if (isEditing && currentOutputId) {
-        const updatedOutput = await updateRTMPOutput(input.id, currentOutputId, formData);
-        setLocalOutputs(prev => prev.map(output => 
-          output.id === currentOutputId ? updatedOutput : output
-        ));
-      } else {
-        const newOutput = await createRTMPOutput(input.id, formData);
-        const completeOutput = {
-          ...newOutput,
-          streamKey: formData.streamKey,
-          address: `${formData.url}`,
-          name: formData.nombre
-        };
-        setLocalOutputs(prev => [...prev, completeOutput]);
-      }
+      const newOutput = await createRTMPOutput(input.id, data);
+      setLocalOutputs(prev => [...prev, newOutput]);
       closeRTMPModal();
-
     } catch (error) {
-      console.error('Error al manejar output RTMP:', error);
+      console.error('Error:', error);
+    }
+  };
+
+  const handleUpdateOutput = async (e, data) => {
+    e.preventDefault();
+    try {
+      console.log('Enviando actualización:', { data, currentOutputId });
+      
+      const updatedOutput = await updateRTMPOutput(input.id, currentOutputId, data);
+      console.log('Output actualizado:', updatedOutput);
+
+      // Actualizar el estado local inmediatamente
+      setLocalOutputs(prev => {
+        const newOutputs = prev.map(output => 
+          output.id === currentOutputId ? updatedOutput : output
+        );
+        console.log('Nuevo estado de outputs:', newOutputs);
+        return newOutputs;
+      });
+
+      closeRTMPModal();
+    } catch (error) {
+      console.error('Error completo:', error);
     }
   };
 
@@ -288,11 +298,11 @@ const InputCard = ({
       <RTMPModal
         isOpen={isRTMPModalOpen}
         onClose={closeRTMPModal}
-        onSubmit={handleRTMPSubmit}
+        onSubmit={isEditing ? handleUpdateOutput : handleRTMPSubmit}
         data={rtmpFormData}
         onChange={handleRTMPChange}
         isEditing={isEditing}
-        reference={input.id}
+        currentOutputId={currentOutputId}
       />
 
       {isInfoModalOpen && (
