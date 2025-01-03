@@ -39,7 +39,7 @@ export async function GET(request, { params }) {
         address: output.config?.output?.[0]?.address || 'Dirección no disponible',
         state: output.state?.exec || 'Desconocido',
         order: output.state?.order || 'Desconocido',
-        key: output.config?.output?.[0]?.options?.[13] || "--", // Validación para evitar errores
+        streamKey: output.config?.output?.[0]?.options?.[13] || "--", // Validación para evitar errores
       })),
     };
 

@@ -22,13 +22,10 @@ export async function GET(request, { params }) {
 
 export async function PUT(request, { params }) {
   let { id } = params;
-  console.log(`ID original en el PUT: ${id}`);
   
   id = id.replace(/^(restreamer-ui:egress:rtmp:)(?:restreamer-ui:egress:rtmp:)?/, '$1');
-  console.log(`ID corregido en el PUT: ${id}`);
   
   const { order } = await request.json();
-  console.log(`Orden recibida: ${order}`);
 
   try {
     await authenticatedRequest(
@@ -48,7 +45,6 @@ export async function PUT(request, { params }) {
       `/api/v3/process/${id}`
     );
 
-    console.log("Estado actualizado del proceso:", updatedProcess.state.exec);
 
     return NextResponse.json({ state: updatedProcess.state.exec });
   } catch (error) {

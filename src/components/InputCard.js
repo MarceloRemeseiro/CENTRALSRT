@@ -8,6 +8,8 @@ import InputInfo from "./InputInfo";
 import InputData from "./InputData";
 import Link from "next/link";
 import { useInputLogic } from "../hooks/useInputLogic";
+import RTMPModal from './modals/RTMPModal';
+import useRTMPOutputs from '@/hooks/useRTMPOutputs';
 
 const InputCard = ({
   input,
@@ -22,6 +24,7 @@ const InputCard = ({
     localInput,
     setLocalInput,
     localOutputs,
+    setLocalOutputs,
     isModalOpen,
     isEditModalOpen,
     videoRefreshTrigger,
@@ -36,7 +39,7 @@ const InputCard = ({
     handleSubmit,
     handleEliminarPunto,
     handleToggle,
-    handleEditarPunto,
+    handleEditarPunto: handleEditarPuntoOriginal,
     handleUpdateOutput,
     setConfirmationModal,
     setEditingOutput,
@@ -48,83 +51,83 @@ const InputCard = ({
     editarPuntoPublicacion
   );
 
-  // Estados para SRT
-  const [isSRTModalOpen, setIsSRTModalOpen] = useState(false);
-  const [srtFormData, setSrtFormData] = useState({
-    nombre: '',
-    url: '',
-    port: '',
-    latency: '',
-    streamId: '',
-    passphrase: ''
-  });
+  const { 
+    createRTMPOutput, 
+    updateRTMPOutput, 
+    deleteRTMPOutput, 
+    toggleRTMPOutput,
+    isLoading 
+  } = useRTMPOutputs();
 
-  // Estados para RTMP
+  const [isRTMPModalOpen, setIsRTMPModalOpen] = useState(false);
   const [rtmpFormData, setRtmpFormData] = useState({
     nombre: '',
     url: '',
     streamKey: ''
   });
-
-  const [editingSRTOutput, setEditingSRTOutput] = useState(null);
-  const [editingRTMPOutput, setEditingRTMPOutput] = useState(null);
-  const [isRTMPModalOpen, setIsRTMPModalOpen] = useState(false);
-  const [isEditRTMPModalOpen, setIsEditRTMPModalOpen] = useState(false);
-  const [isEditSRTModalOpen, setIsEditSRTModalOpen] = useState(false);
-
-  // Función para manejar el submit de SRT
-  const handleSRTSubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      const data = {
-        type: 'srt',
-        metadata: {
-          'restreamer-ui': {
-            name: srtFormData.nombre,
-            settings: {
-              address: `${srtFormData.url}:${srtFormData.port}`,
-              protocol: 'srt://',
-              params: {
-                latency: srtFormData.latency || '200',
-                streamid: srtFormData.streamId || '',
-                passphrase: srtFormData.passphrase || '',
-                transtype: 'live',
-                mode: 'caller',
-                nakreport: true,
-                tlpktdrop: true,
-                ipttl: '64',
-                iptos: '0xB8',
-                oheadbw: '25'
-              }
-            }
-          }
-        }
-      };
-
-      const result = await agregarPuntoPublicacion(input.id, data);
-      console.log('Output creado:', result);
-
-      setIsSRTModalOpen(false);
-      setSrtFormData({
-        nombre: '',
-        url: '',
-        port: '',
-        latency: '',
-        streamId: '',
-        passphrase: ''
-      });
-    } catch (error) {
-      console.error('Error al crear output SRT:', error);
-    }
-  };
-
-  // Nuevo estado para el modal de edición de info
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentOutputId, setCurrentOutputId] = useState(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [infoFormData, setInfoFormData] = useState({
-    name: input?.name || '',
-    description: input?.description || ''
+    name: '',
+    description: ''
   });
+
+  const openRTMPModal = (output = null) => {
+    if (output) {
+      setRtmpFormData({
+        nombre: output.name,
+        url: output.url,
+        streamKey: output.streamKey
+      });
+      setIsEditing(true);
+      setCurrentOutputId(output.id);
+    } else {
+      setRtmpFormData({ nombre: '', url: '', streamKey: '' });
+      setIsEditing(false);
+      setCurrentOutputId(null);
+    }
+    setIsRTMPModalOpen(true);
+  };
+
+  const closeRTMPModal = () => {
+    setIsRTMPModalOpen(false);
+    setRtmpFormData({ nombre: '', url: '', streamKey: '' });
+    setIsEditing(false);
+    setCurrentOutputId(null);
+  };
+
+  const handleRTMPChange = (e) => {
+    const { name, value } = e.target;
+    setRtmpFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleRTMPSubmit = async (e, formData) => {
+    try {
+      if (isEditing && currentOutputId) {
+        const updatedOutput = await updateRTMPOutput(input.id, currentOutputId, formData);
+        setLocalOutputs(prev => prev.map(output => 
+          output.id === currentOutputId ? updatedOutput : output
+        ));
+      } else {
+        const newOutput = await createRTMPOutput(input.id, formData);
+        const completeOutput = {
+          ...newOutput,
+          streamKey: formData.streamKey,
+          address: `${formData.url}`,
+          name: formData.nombre
+        };
+        setLocalOutputs(prev => [...prev, completeOutput]);
+      }
+      closeRTMPModal();
+
+    } catch (error) {
+      console.error('Error al manejar output RTMP:', error);
+    }
+  };
 
   const getStatusIcon = (state) => {
     switch (state) {
@@ -180,6 +183,21 @@ const InputCard = ({
       setIsInfoModalOpen(false);
     } catch (error) {
       console.error('Error updating input info:', error);
+    }
+  };
+
+  const handleOpenRTMPEdit = (outputId) => {
+    const output = localOutputs.find(o => o.id === outputId);
+    console.log('Editando output:', output);
+    if (output) {
+      setRtmpFormData({
+        nombre: output.name,
+        url: output.address,
+        streamKey: output.streamKey
+      });
+      setIsEditing(true);
+      setCurrentOutputId(outputId);
+      setIsRTMPModalOpen(true);
     }
   };
 
@@ -248,15 +266,16 @@ const InputCard = ({
         localOutputs={localOutputs}
         handleEliminarPunto={handleEliminarPunto}
         handleToggle={handleToggle}
-        handleEditarPunto={handleEditarPunto}
+        handleEditarPunto={handleOpenRTMPEdit}
       />
 
       <div className="flex justify-center mt-4 space-x-4">
         <button
-          onClick={openModal}
+          onClick={() => openRTMPModal()}
           className="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+          disabled={isLoading}
         >
-          Agregar RTMP
+          {isLoading ? 'Procesando...' : 'Agregar RTMP'}
         </button>
         <button
           onClick={() => setIsSRTModalOpen(true)}
@@ -266,126 +285,15 @@ const InputCard = ({
         </button>
       </div>
 
-      {/* Modal RTMP */}
-      {isModalOpen && (
-        <Modal onClose={closeModal}>
-          <h2 className="text-xl font-bold mb-4">Agregar RTMP</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="text-gray-400">Nombre</label>
-              <input
-                type="text"
-                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
-                placeholder="Ingresa un nombre"
-                name="nombre"
-                value={newOutput.nombre}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div>
-              <label className="text-gray-400">URL</label>
-              <input
-                type="text"
-                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
-                placeholder="Ingresa la URL"
-                name="url"
-                value={newOutput.url}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div>
-              <label className="text-gray-400">Key</label>
-              <input
-                type="text"
-                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
-                placeholder="Ingresa la Key"
-                name="streamKey"
-                value={newOutput.streamKey}
-                onChange={handleInputChange}
-              />
-            </div>
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
-            >
-              Agregar
-            </button>
-          </form>
-        </Modal>
-      )}
-
-      {/* Modal SRT */}
-      {isSRTModalOpen && (
-        <Modal onClose={() => setIsSRTModalOpen(false)}>
-          <h2 className="text-xl font-bold mb-4">Agregar SRT</h2>
-          <form onSubmit={handleSRTSubmit} className="space-y-4">
-            <div>
-              <label className="text-gray-400">Nombre</label>
-              <input
-                type="text"
-                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
-                value={srtFormData.nombre}
-                onChange={(e) => setSrtFormData({...srtFormData, nombre: e.target.value})}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-gray-400">URL</label>
-              <input
-                type="text"
-                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
-                value={srtFormData.url}
-                onChange={(e) => setSrtFormData({...srtFormData, url: e.target.value})}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-gray-400">Puerto</label>
-              <input
-                type="text"
-                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
-                value={srtFormData.port}
-                onChange={(e) => setSrtFormData({...srtFormData, port: e.target.value})}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-gray-400">Latencia (ms)</label>
-              <input
-                type="text"
-                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
-                value={srtFormData.latency}
-                onChange={(e) => setSrtFormData({...srtFormData, latency: e.target.value})}
-                placeholder="200"
-              />
-            </div>
-            <div>
-              <label className="text-gray-400">Stream ID</label>
-              <input
-                type="text"
-                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
-                value={srtFormData.streamId}
-                onChange={(e) => setSrtFormData({...srtFormData, streamId: e.target.value})}
-              />
-            </div>
-            <div>
-              <label className="text-gray-400">Passphrase</label>
-              <input
-                type="password"
-                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
-                value={srtFormData.passphrase}
-                onChange={(e) => setSrtFormData({...srtFormData, passphrase: e.target.value})}
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
-            >
-              Agregar
-            </button>
-          </form>
-        </Modal>
-      )}
+      <RTMPModal
+        isOpen={isRTMPModalOpen}
+        onClose={closeRTMPModal}
+        onSubmit={handleRTMPSubmit}
+        data={rtmpFormData}
+        onChange={handleRTMPChange}
+        isEditing={isEditing}
+        reference={input.id}
+      />
 
       {isInfoModalOpen && (
         <Modal onClose={() => setIsInfoModalOpen(false)}>
@@ -435,65 +343,11 @@ const InputCard = ({
           </form>
         </Modal>
       )}
-
-      {isEditModalOpen && editingOutput && (
-        <Modal onClose={closeEditModal}>
-          <h2 className="text-xl font-bold mb-4">Editar RTMP</h2>
-          <form onSubmit={handleUpdateOutput} className="space-y-4">
-            <div>
-              <label className="text-gray-400">Nombre</label>
-              <input
-                type="text"
-                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
-                placeholder="Ingresa un nombre"
-                value={editingOutput.nombre || ''}
-                onChange={(e) => setEditingOutput({...editingOutput, nombre: e.target.value})}
-              />
-            </div>
-            <div>
-              <label className="text-gray-400">URL</label>
-              <input
-                type="text"
-                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
-                placeholder="Ingresa la URL"
-                value={editingOutput.url || ''}
-                onChange={(e) => setEditingOutput({...editingOutput, url: e.target.value})}
-              />
-            </div>
-            <div>
-              <label className="text-gray-400">Key</label>
-              <input
-                type="text"
-                className="w-full p-2 mt-1 border rounded bg-gray-800 text-white"
-                placeholder="Ingresa la Key"
-                value={editingOutput.streamKey || ''}
-                onChange={(e) => setEditingOutput({...editingOutput, streamKey: e.target.value})}
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={closeEditModal}
-                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Guardar
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
+     
 
       <ConfirmationModal
         isOpen={confirmationModal.isOpen}
-        onClose={() =>
-          setConfirmationModal({ ...confirmationModal, isOpen: false })
-        }
+        onClose={() => setConfirmationModal({ ...confirmationModal, isOpen: false })}
         onConfirm={() => {
           confirmationModal.onConfirm();
           setConfirmationModal({ ...confirmationModal, isOpen: false });

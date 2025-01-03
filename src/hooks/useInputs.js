@@ -45,7 +45,6 @@ const useInputs = () => {
       }
 
       const result = await response.json();
-      console.log('Resultado del backend:', result);
 
       setInputs(prevInputs =>
         prevInputs.map(input =>
@@ -180,11 +179,7 @@ const useInputs = () => {
 
   const editarPuntoPublicacion = async (inputId, outputId, data) => {
     try {
-      console.log('Enviando datos al backend:', {
-        inputId,
-        outputId,
-        data
-      });
+
 
       const response = await fetch(`/api/process/${inputId}/outputs/${outputId}`, {
         method: 'PUT',

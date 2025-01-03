@@ -19,7 +19,6 @@ export async function POST(request, { params }) {
 
   try {
     data = await request.json();
-    console.log("1. Datos recibidos:", JSON.stringify(data, null, 2));
 
     // Validación inicial de datos
     if (!data || !data.type) {
@@ -42,7 +41,6 @@ export async function POST(request, { params }) {
       const srtSettings = data.metadata['restreamer-ui'].settings;
       const srtAddress = `srt://${srtSettings.address}?${new URLSearchParams(srtSettings.params).toString()}`;
       
-      console.log("2. Construyendo SRT address:", srtAddress);
 
       newOutput = {
         id: outputId,
@@ -131,16 +129,13 @@ export async function POST(request, { params }) {
       };
     }
 
-    console.log("3. Configuración a enviar:", JSON.stringify(newOutput, null, 2));
-    console.log("4. Metadata a enviar:", JSON.stringify(metadata, null, 2));
-
+    
     const createdEgressProcess = await authenticatedRequest(
       "POST",
       "/api/v3/process",
       newOutput
     );
 
-    console.log("5. Proceso creado:", JSON.stringify(createdEgressProcess, null, 2));
 
     await authenticatedRequest(
       "PUT",
@@ -154,7 +149,7 @@ export async function POST(request, { params }) {
       address: newOutput.output[0].address,
       state: createdEgressProcess.state?.exec || "unknown",
       order: "stop",
-      key: "--",
+      streamKey: "--",
       type: 'srt'
     } : {
       id: createdEgressProcess.id,
@@ -162,7 +157,7 @@ export async function POST(request, { params }) {
       address: data.address,
       state: createdEgressProcess.state?.exec || "unknown",
       order: "stop",
-      key: data.streamKey
+      streamKey: data.streamKey
     };
 
     return NextResponse.json(formattedOutput);
@@ -201,13 +196,11 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ error: 'outputId is required' }, { status: 400 });
   }
 
-  console.log(`Eliminando output. Input ID: ${id}, Output ID: ${outputId}`);
 
   try {
     // No necesitamos corregir el ID aquí, ya que lo hicimos en el cliente
     const result = await authenticatedRequest('DELETE', `/api/v3/process/${outputId}`);
     
-    console.log('Resultado de la eliminación:', result);
     
     return NextResponse.json({ message: 'Output eliminado con éxito' });
   } catch (error) {

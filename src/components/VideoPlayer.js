@@ -9,16 +9,12 @@ const VideoPlayer = ({ url, isRunning, refreshTrigger }) => {
   const [isConnecting, setIsConnecting] = useState(false);
   
   useEffect(() => {
-    console.log('VideoPlayer - Props recibidas:');
-    console.log('- URL:', url);
-    console.log('- isRunning:', isRunning);
-    console.log('- refreshTrigger:', refreshTrigger);
+ 
 
     let hls = hlsRef.current;
 
     const initPlayer = () => {
       if (isRunning && url && Hls.isSupported()) {
-        console.log('Iniciando reproductor HLS con URL:', url);
         setIsPlaying(false);
         setIsConnecting(true);
         
@@ -33,7 +29,6 @@ const VideoPlayer = ({ url, isRunning, refreshTrigger }) => {
         });
 
         hls.on(Hls.Events.ERROR, (event, data) => {
-          console.log('Error HLS, reintentando en 5 segundos...');
           setIsPlaying(false);
           setIsConnecting(true);
           if (retryTimeoutRef.current) {
@@ -46,15 +41,12 @@ const VideoPlayer = ({ url, isRunning, refreshTrigger }) => {
         hls.attachMedia(videoRef.current);
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          console.log('Manifest parseado correctamente');
           videoRef.current.play()
             .then(() => {
-              console.log('Reproducción iniciada');
               setIsPlaying(true);
               setIsConnecting(false);
             })
             .catch(e => {
-              console.error("Error en autoplay:", e);
               setIsPlaying(false);
               setIsConnecting(false);
             });
@@ -68,7 +60,6 @@ const VideoPlayer = ({ url, isRunning, refreshTrigger }) => {
     };
 
     if (isRunning) {
-      console.log('Estado running detectado, esperando 5 segundos...');
       setIsConnecting(true);
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current);

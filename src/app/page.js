@@ -20,7 +20,6 @@ function Home() {
   } = useInputs();
 
   const [isClient, setIsClient] = useState(false);
-  console.log(inputs);
   
   useEffect(() => {
     setIsClient(true);

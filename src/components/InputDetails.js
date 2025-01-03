@@ -91,7 +91,6 @@ const InputDetails = ({
         }
       };
 
-      console.log('Creando output SRT:', data);
       
       await agregarPuntoPublicacion(input.id, data);
       setIsSRTModalOpen(false);
@@ -215,13 +214,11 @@ const InputDetails = ({
     try {
       const response = await fetch('/api/process/debug');
       const data = await response.json();
-      console.log('Estructura del proceso:', data);
       
       // Buscar específicamente los outputs SRT
       const srtOutputs = data.process.outputs.filter(output => 
         output.address.startsWith('srt://')
       );
-      console.log('Outputs SRT:', srtOutputs);
     } catch (error) {
       console.error('Error al obtener debug:', error);
     }

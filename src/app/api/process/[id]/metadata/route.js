@@ -6,9 +6,7 @@ export async function PUT(request, { params }) {
     const { id } = params;
     const { name, description } = await request.json();
 
-    console.log('Route - Starting metadata update');
-    console.log('Route - Process ID:', id);
-    console.log('Route - Received data:', { name, description });
+  
 
     // Usar el endpoint específico de metadata con la key 'restreamer-ui'
     const updatedProcess = await authenticatedRequest(
@@ -22,7 +20,6 @@ export async function PUT(request, { params }) {
       }
     );
 
-    console.log('Route - Update response:', updatedProcess);
 
     return NextResponse.json({
       success: true,
